@@ -95,6 +95,7 @@ module Blacklight::Solr
         f_request_params = blacklight_params[:f]
 
         f_request_params.each_pair do |facet_field, value_list|
+          next unless blacklight_config.facet_fields[facet_field.to_s].present?
           Array(value_list).reject(&:blank?).each do |value|
             solr_parameters.append_filter_query facet_value_to_fq_string(facet_field, value)
           end
