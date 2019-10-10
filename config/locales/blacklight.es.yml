@@ -6,6 +6,14 @@ es:
       previous: '&laquo; Anterior'
       next: 'Siguiente &raquo;'
       truncate: '…'
+      aria:
+        container_label: enlaces de paginación
+        current_page: Página actual, página %{page}
+        go_to_first_page: Ir a la primera pagina
+        go_to_last_page: Ir a la última página
+        go_to_next_page: Ir a la página siguiente
+        go_to_page: Ir a la página %{page}
+        go_to_previous_page: Regresar a la pagina anterior
 
     pagination_compact:
       previous: '&laquo; Anterior'
@@ -13,6 +21,10 @@ es:
 
   blacklight:
     application_name: 'Blacklight'
+    skip_links:
+      main_content: 'Saltar al contenido principal'
+      search_field: 'Salta a la búsqueda'
+      first_result: 'Salta al primer resultado de búsqueda'
     header_links:
       login: 'Entrar'
       logout: 'Salir'
@@ -135,11 +147,13 @@ es:
         invalid_solr_id: "Lo sentimos, usted ha solicitado un registro que no existe."
       per_page:
         label: '%{count}<span class="sr-only"> por página</span>'
-        button_label: '%{count} por página'
+        button_label: '%{count} por página' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> por página</span>'
         title: 'El número de resultados a mostrar por página'
         submit: 'Actualización'
       sort:
-        label: 'Ordenar por %{field}'
+        label: 'Ordenar por %{field}' # TODO: Remove during major release
+        label_html: 'Ordenar<span class="d-none d-sm-inline"> por %{field}</span>'
         submit: 'Resultados de ordenación'
       form:
         search_field:
@@ -162,6 +176,9 @@ es:
         one: '<strong>1 de 1</strong>'
         other: '<strong>%{current}</strong> de <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: 'Resultados de la búsqueda'
+          limit_search: 'Limite su búsqueda'
         counter: '%{counter}.'
       facets:
         title: 'Limite su búsqueda'
@@ -207,5 +224,11 @@ es:
 
     entry_name:
       default: 'entrada'
+      grouped:
+        default: 'resultado agrupado'
 
     did_you_mean: '¿Quiere decir %{options}?'
+
+    main:
+      aria:
+        main_container: 'Contenido principal'

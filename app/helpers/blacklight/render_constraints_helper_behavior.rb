@@ -65,6 +65,7 @@ module Blacklight::RenderConstraintsHelperBehavior
   # @return [String]
   def render_constraints_filters(localized_params = params)
     return "".html_safe unless localized_params[:f]
+
     path = controller.search_state_class.new(localized_params, blacklight_config, controller)
     content = []
     localized_params[:f].each_pair do |facet, values|
@@ -87,6 +88,7 @@ module Blacklight::RenderConstraintsHelperBehavior
       next if val.blank? # skip empty string
       # skip if facet field not configured
       next if blacklight_config.facet_fields[facet.to_s].blank?
+
       render_constraint_element(facet_field_label(facet_config.key),
                                 facet_display_value(facet, val),
                                 remove: search_action_path(path.remove_facet_params(facet, val)),

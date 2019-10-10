@@ -6,20 +6,34 @@ module Blacklight::UrlHelperBehavior
     search_state.url_for_document(doc, options)
   end
 
-  # link_to_document(doc, 'VIEW', :counter => 3)
-  # Use the catalog_path RESTful route to create a link to the show page for a specific item.
+  # Uses the catalog_path route to create a link to the show page for an item.
   # catalog_path accepts a hash. The solr query params are stored in the session,
   # so we only need the +counter+ param here. We also need to know if we are viewing to document as part of search results.
   # TODO: move this to the IndexPresenter
+  # @param doc [SolrDocument] the document
+  # @param field_or_opts [Hash, String] either a string to render as the link text or options
+  # @param opts [Hash] the options to create the link with
+  # @option opts [Number] :counter (nil) the count to set in the session (for paging through a query result)
+  # @example Passing in an image
+  #   link_to_document(doc, '<img src="thumbnail.png">', counter: 3) #=> "<a href=\"catalog/123\" data-tracker-href=\"/catalog/123/track?counter=3&search_id=999\"><img src="thumbnail.png"></a>
+  # @example With the default document link field
+  #   link_to_document(doc, counter: 3) #=> "<a href=\"catalog/123\" data-tracker-href=\"/catalog/123/track?counter=3&search_id=999\">My Title</a>
   def link_to_document(doc, field_or_opts = nil, opts = { counter: nil })
-    if field_or_opts.is_a? Hash
-      opts = field_or_opts
-    else
-      field = field_or_opts
-    end
+    label = case field_or_opts
+            when NilClass
+              index_presenter(doc).label document_show_link_field(doc), opts
+            when Hash
+              opts = field_or_opts
+              index_presenter(doc).label document_show_link_field(doc), opts
+            when Proc, Symbol
+              Deprecation.warn(self, "passing a #{field_or_opts.class} to link_to_document is deprecated and will be removed in Blacklight 8")
+              Deprecation.silence(Blacklight::IndexPresenter) do
+                index_presenter(doc).label field_or_opts, opts
+              end
+            else # String
+              field_or_opts
+            end
 
-    field ||= document_show_link_field(doc)
-    label = index_presenter(doc).label field, opts
     link_to label, url_for_document(doc), document_link_params(doc, opts)
   end
 
@@ -52,7 +66,7 @@ module Blacklight::UrlHelperBehavior
   # @param [Integer] counter
   # @example
   #   session_tracking_params(SolrDocument.new(id: 123), 7)
-  #   => { data: { :'tracker-href' => '/catalog/123/track?counter=7&search_id=999' } }
+  #   => { data: { :'context-href' => '/catalog/123/track?counter=7&search_id=999' } }
   def session_tracking_params document, counter
     path = session_tracking_path(document, per_page: params.fetch(:per_page, search_session['per_page']), counter: counter, search_id: current_search_session.try(:id))
 
@@ -60,20 +74,21 @@ module Blacklight::UrlHelperBehavior
       return {}
     end
 
-    { data: { :'context-href' => path } }
+    { data: { 'context-href': path } }
   end
   private :session_tracking_params
 
   ##
   # Get the URL for tracking search sessions across pages using polymorphic routing
   def session_tracking_path document, params = {}
-    return if document.nil?
+    return if document.nil? || !blacklight_config&.track_search_session
 
-    if respond_to?(controller_tracking_method)
-      send(controller_tracking_method, params.merge(id: document))
-    else
-      blacklight.track_search_context_path(params.merge(id: document))
+    if main_app.respond_to?(controller_tracking_method)
+      return main_app.public_send(controller_tracking_method, params.merge(id: document))
     end
+
+    raise "Unable to find #{controller_tracking_method} route helper. " \
+    "Did you add `concerns :searchable` routing mixin to your `config/routes.rb`?"
   end
 
   def controller_tracking_method

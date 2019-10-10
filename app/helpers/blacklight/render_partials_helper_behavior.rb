@@ -30,6 +30,18 @@ module Blacklight::RenderPartialsHelperBehavior
   end
 
   ##
+  # Return the list of xml for a given solr document. Doesn't safely escape for HTML.
+  # @param [SolrDocument] doc solr document to render partials for
+  # @param [Array<String>] partials list of partials to render
+  # @param [Hash] locals local variables to pass to the render call
+  # @return [String]
+  def render_xml_partials(doc, partials = [], locals = {})
+    partials.map do |action_name|
+      render_document_partial(doc, action_name, locals)
+    end.join("\n")
+  end
+
+  ##
   # Given a doc and a base name for a partial, this method will attempt to render
   # an appropriate partial based on the document format and view type.
   #
@@ -132,8 +144,8 @@ module Blacklight::RenderPartialsHelperBehavior
   def type_field_to_partial_name(_document, display_type)
     # using "_" as sep. to more closely follow the views file naming conventions
     # parameterize uses "-" as the default sep. which throws errors
-    underscore = '_'.freeze
-    Array(display_type).join(' '.freeze).tr('-'.freeze, underscore).parameterize(separator: underscore)
+    underscore = '_'
+    Array(display_type).join(' ').tr('-', underscore).parameterize(separator: underscore)
   end
 
   ##

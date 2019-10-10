@@ -13,7 +13,10 @@ zh:
 
   blacklight:
     application_name: 'Blacklight'
-
+    skip_links:
+      main_content: '转到主要内容'
+      search_field: '转到搜索'
+      first_result: '转到第一个搜索结果'
     header_links:
       login: '登陆'
       logout: '注销'
@@ -136,11 +139,13 @@ zh:
         invalid_solr_id: "抱歉，你要找的结果不存在。"
       per_page:
         label: '%{count}<span class="sr-only"> 每页</span>'
-        button_label: '%{count} 每页'
+        button_label: '%{count} 每页' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> 每页</span>'
         title: '每页显示结果数'
         submit: '更新'
       sort:
-        label: '按 %{field} 排序'
+        label: '按 %{field} 排序' # TODO: Remove during major release
+        label_html: '<span class="d-none d-sm-inline">按 %{field} </span>排序'
         submit: '排序'
       form:
         search_field:
@@ -163,6 +168,9 @@ zh:
         one: '<strong>1 / 1</strong>'
         other: '<strong>%{current}</strong> / <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: '搜索结果'
+          limit_search: '限定搜索'
         counter: '%{counter}. '
       facets:
         title: '限定搜索'
@@ -208,5 +216,11 @@ zh:
 
     entry_name:
       default: '条目'
+      grouped:
+        default: '分组结果'
 
     did_you_mean: '你是要输入： %{options} 吗？'
+
+    main:
+      aria:
+        main_container: '主要内容'

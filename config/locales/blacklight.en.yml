@@ -6,6 +6,14 @@ en:
       previous: '&laquo; Previous'
       next: 'Next &raquo;'
       truncate: '…'
+      aria:
+        container_label: 'pagination links'
+        current_page: 'Current Page, Page %{page}'
+        go_to_page: 'Go to page %{page}'
+        go_to_previous_page: 'Go to previous page'
+        go_to_next_page: 'Go to next page'
+        go_to_first_page: 'Go to first page'
+        go_to_last_page: 'Go to last page'
 
     pagination_compact:
       previous: '&laquo; Previous'
@@ -13,6 +21,10 @@ en:
 
   blacklight:
     application_name: 'Blacklight'
+    skip_links:
+      main_content: 'Skip to main content'
+      search_field: 'Skip to search'
+      first_result: 'Skip to first result'
     header_links:
       login: 'Login'
       logout: 'Log Out'
@@ -135,11 +147,13 @@ en:
         invalid_solr_id: "Sorry, you have requested a record that doesn't exist."
       per_page:
         label: '%{count}<span class="sr-only"> per page</span>'
-        button_label: '%{count} per page'
+        button_label: '%{count} per page' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> per page</span>'
         title: 'Number of results to display per page'
         submit: 'Update'
       sort:
-        label: 'Sort by %{field}'
+        label: 'Sort by %{field}' # TODO: Remove during major release
+        label_html: 'Sort<span class="d-none d-sm-inline"> by %{field}</span>'
         submit: 'sort results'
       form:
         search_field:
@@ -162,6 +176,9 @@ en:
         one: '<strong>1 of 1</strong>'
         other: '<strong>%{current}</strong> of <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: 'search results'
+          limit_search: 'limit your search'
         counter: '%{counter}. '
       facets:
         title: 'Limit your search'
@@ -207,5 +224,11 @@ en:
 
     entry_name:
       default: 'entry'
+      grouped:
+        default: 'grouped result'
 
     did_you_mean: 'Did you mean to type: %{options}?'
+
+    main:
+      aria:
+        main_container: 'Main content'

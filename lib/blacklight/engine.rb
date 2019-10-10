@@ -39,15 +39,16 @@ module Blacklight
       'Sprint' => 'messaging.sprintpcs.com',
       'T Mobile' => 'tmomail.net',
       'Alltel' => 'message.alltel.com',
-      'Cricket' => 'mms.mycricket.com'
+      'Cricket' => 'mms.mycricket.com',
+      'Google Fi' => 'msg.fi.google.com'
     }
 
     config.bookmarks_http_method = :post
 
     config.email_regexp = defined?(Devise) ? Devise.email_regexp : /\A[^@\s]+@[^@\s]+\z/
 
-    config.action_dispatch.rescue_responses.merge!(
-      "Blacklight::Exceptions::RecordNotFound" => :not_found
-    )
+    config.action_dispatch.rescue_responses["Blacklight::Exceptions::RecordNotFound"] = :not_found
+
+    config.enable_search_bar_autofocus = false
   end
 end

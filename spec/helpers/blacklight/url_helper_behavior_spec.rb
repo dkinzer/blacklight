@@ -85,7 +85,7 @@ RSpec.describe Blacklight::UrlHelperBehavior do
       allow(helper).to receive(:current_search_session).and_return double(query_params: bookmarks_query_params)
       tag = helper.link_back_to_catalog
       expect(tag).to match /Back to Bookmarks/
-      expect(tag).to match /\/bookmarks/
+      expect(tag).to match %r{/bookmarks}
     end
 
     context "with a search context" do
@@ -152,7 +152,7 @@ RSpec.describe Blacklight::UrlHelperBehavior do
       allow(helper).to receive_messages(params: parameter_class.new)
       tag = helper.link_to_query(query)
       expect(tag).to match /q=#{query}/
-      expect(tag).to match />#{query}<\/a>/
+      expect(tag).to match %r{>#{query}</a>}
     end
 
     it "builds a link tag to catalog using query string and other existing params" do
@@ -201,17 +201,21 @@ RSpec.describe Blacklight::UrlHelperBehavior do
 
     before do
       allow(controller).to receive(:action_name).and_return('index')
+      allow(helper.main_app).to receive(:track_test_path).and_return('tracking url')
+      allow(helper.main_app).to receive(:respond_to?).with('track_test_path').and_return(true)
     end
 
     it "consists of the document title wrapped in a <a>" do
+      expect(Deprecation).to receive(:warn)
       expect(helper.link_to_document(document, :title_tsim)).to have_selector("a", text: '654321', count: 1)
     end
 
     it "accepts and returns a string label" do
-      expect(helper.link_to_document(document, String.new('title_tsim'))).to have_selector("a", text: 'title_tsim', count: 1)
+      expect(helper.link_to_document(document, 'This is the title')).to have_selector("a", text: 'This is the title', count: 1)
     end
 
     it "accepts and returns a Proc" do
+      expect(Deprecation).to receive(:warn).twice
       expect(helper.link_to_document(document, proc { |doc, _opts| doc[:id] + ": " + doc.first(:title_tsim) })).to have_selector("a", text: '123456: 654321', count: 1)
     end
 
@@ -219,10 +223,12 @@ RSpec.describe Blacklight::UrlHelperBehavior do
       let(:data) { { 'id' => id } }
 
       it "returns id" do
+        expect(Deprecation).to receive(:warn)
         expect(helper.link_to_document(document, :title_tsim)).to have_selector("a", text: '123456', count: 1)
       end
 
       it "is html safe" do
+        expect(Deprecation).to receive(:warn)
         expect(helper.link_to_document(document, :title_tsim)).to be_html_safe
       end
 
@@ -244,9 +250,9 @@ RSpec.describe Blacklight::UrlHelperBehavior do
     end
 
     it "converts the counter parameter into a data- attribute" do
-      allow(helper).to receive(:track_test_path).with(hash_including(id: have_attributes(id: '123456'), counter: 5)).and_return('tracking url')
-
+      expect(Deprecation).to receive(:warn)
       expect(helper.link_to_document(document, :title_tsim, counter: 5)).to include 'data-context-href="tracking url"'
+      expect(helper.main_app).to have_received(:track_test_path).with(hash_including(id: have_attributes(id: '123456'), counter: 5))
     end
 
     it "includes the data- attributes from the options" do
@@ -255,15 +261,10 @@ RSpec.describe Blacklight::UrlHelperBehavior do
     end
 
     it 'adds a controller-specific tracking attribute' do
-      expect(helper).to receive(:track_test_path).and_return('/asdf')
+      expect(helper.main_app).to receive(:track_test_path).and_return('/asdf')
       link = helper.link_to_document document, data: { x: 1 }
 
       expect(link).to have_selector '[data-context-href="/asdf"]'
-    end
-
-    it 'adds a global tracking attribute' do
-      link = helper.link_to_document document, data: { x: 1 }
-      expect(link).to have_selector '[data-context-href="/catalog/123456/track"]'
     end
   end
 
@@ -288,13 +289,18 @@ RSpec.describe Blacklight::UrlHelperBehavior do
     let(:document) { SolrDocument.new(id: 1) }
 
     it "determines the correct route for the document class" do
-      allow(helper).to receive(:track_test_path).with(id: have_attributes(id: 1)).and_return('x')
+      allow(helper.main_app).to receive(:track_test_path).with(id: have_attributes(id: 1)).and_return('x')
       expect(helper.session_tracking_path(document)).to eq 'x'
     end
 
     it "passes through tracking parameters" do
-      allow(helper).to receive(:track_test_path).with(id: have_attributes(id: 1), x: 1).and_return('x')
+      allow(helper.main_app).to receive(:track_test_path).with(id: have_attributes(id: 1), x: 1).and_return('x')
       expect(helper.session_tracking_path(document, x: 1)).to eq 'x'
+    end
+
+    it "uses the track_search_session configuration to determine whether to track the search session" do
+      blacklight_config.track_search_session = false
+      expect(helper.session_tracking_path(document, x: 1)).to eq nil
     end
   end
 end

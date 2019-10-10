@@ -13,7 +13,10 @@ nl:
 
   blacklight:
     application_name: 'Blacklight'
-
+    skip_links:
+      main_content: 'Ga naar de hoofdinhoud'
+      search_field: 'Ga naar de zoekopdracht'
+      first_result: 'Ga naar het eerste zoekresultaat'
     header_links:
       login: 'Login'
       logout: 'Log Out'
@@ -136,11 +139,13 @@ nl:
         invalid_solr_id: "Sorry, u vroeg een onbestaande record op."
       per_page:
         label: '%{count}<span class="sr-only"> per pagina</span>'
-        button_label: '%{count} per pagina'
+        button_label: '%{count} per pagina' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> per pagina</span>'
         title: 'Toon aantal zoekresultaten per pagina'
         submit: 'Update'
       sort:
-        label: 'Sorteer op %{field}'
+        label: 'Sorteer op %{field}' # TODO: Remove during major release
+        label_html: 'Sorteer<span class="d-none d-sm-inline"> op %{field}</span>'
         submit: 'sorteer resultaten'
       form:
         search_field:
@@ -163,6 +168,9 @@ nl:
         one: '<strong>1 van 1</strong>'
         other: '<strong>%{current}</strong> van <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: 'Zoek resultaten'
+          limit_search: 'Verfijn uw zoekopdracht'
         counter: '%{counter}. '
       facets:
         title: 'Verfijn uw zoekopdracht'
@@ -208,5 +216,11 @@ nl:
 
     entry_name:
       default: 'ingang'
+      grouped:
+        default: 'gegroepeerd resultaat'
 
     did_you_mean: 'Bedoelde u: %{options}?'
+
+    main:
+      aria:
+        main_container: 'Belangrijkste inhoud'

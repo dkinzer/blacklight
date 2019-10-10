@@ -6,6 +6,14 @@ de:
       previous: '&laquo; Voherige'
       next: 'Nächste &raquo;'
       truncate: '…'
+      aria:
+        container_label: Paginierungslinks
+        current_page: Aktuelle Seite, Seite %{page}
+        go_to_first_page: Gehe zur ersten Seite
+        go_to_last_page: Gehe zur letzten Seite
+        go_to_next_page: Gehe zur nächsten Seite
+        go_to_page: Gehe zur Seite %{page}
+        go_to_previous_page: Zurück zur letzten Seite
 
     pagination_compact:
       previous: '&laquo; Voherige'
@@ -13,6 +21,10 @@ de:
 
   blacklight:
     application_name: 'Blacklight'
+    skip_links:
+      main_content: 'Zum Hauptinhalt gehen'
+      search_field: 'Gehen Sie zur Suchleiste'
+      first_result: 'Gehe zum ersten Suchergebnis'
     header_links:
       login: 'Anmelden'
       logout: 'Ausloggen'
@@ -135,11 +147,13 @@ de:
         invalid_solr_id: "Entschuldigung, Sie haben einen nicht vorhandenen Datensatz angefordert."
       per_page:
         label: '%{count}<span class="sr-only"> pro Seite</span>'
-        button_label: '%{count} pro Seite'
+        button_label: '%{count} pro Seite' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> pro Seite</span>'
         title: 'Anzahl der Ergebnisse, die pro Seite angezeigt werden'
         submit: 'Aktualisieren'
       sort:
-        label: 'Ordnen nach %{field}'
+        label: 'Ordnen nach %{field}' # TODO: Remove during major release
+        label_html: 'Ordnen<span class="d-none d-sm-inline"> nach %{field}</span>'
         submit: 'Ergebnisse ordnen'
       form:
         search_field:
@@ -162,6 +176,9 @@ de:
         one: '<strong>1 von 1</strong>'
         other: '<strong>%{current}</strong> von <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: 'Suchergebnisse'
+          limit_search: 'Suche beschränken'
         counter: '%{counter}. '
       facets:
         title: 'Suche beschränken'
@@ -207,5 +224,11 @@ de:
 
     entry_name:
       default: 'Eintrag'
+      grouped:
+        default: 'gruppiertes Ergebnis'
 
     did_you_mean: 'Meinten Sie: %{options}?'
+
+    main:
+      aria:
+        main_container: 'Hauptinhalt'

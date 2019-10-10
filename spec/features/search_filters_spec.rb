@@ -169,22 +169,37 @@ RSpec.describe "Facets" do
   it "is collapsed when not selected", js: true do
     skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
     visit root_path
+
+    within('#facets .navbar') do
+      page.find('button.navbar-toggler').click
+    end
+
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
     end
   end
-  it "expands when the heading is clicked", js: true do
+  it "expands when the heading button is clicked", js: true do
     skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
     visit root_path
+
+    within('#facets .navbar') do
+      page.find('button.navbar-toggler').click
+    end
+
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
-      find(".card-header").click
-      expect(page).to     have_selector(".card-body", visible: true)
+      find(".card-header button").click
+      expect(page).to have_selector(".card-body", visible: true)
     end
   end
-  it "expands when the anchor is clicked", js: true do
+  it "expands when the button is clicked", js: true do
     skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
     visit root_path
+
+    within('#facets .navbar') do
+      page.find('button.navbar-toggler').click
+    end
+
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
       find(".card-header").click
@@ -194,8 +209,13 @@ RSpec.describe "Facets" do
   it "keeps selected facets expanded on page load", js: true do
     skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
     visit root_path
+
+    within('#facets .navbar') do
+      page.find('button.navbar-toggler').click
+    end
+
     within(".blacklight-subject_ssim") do
-      click_link "Topic"
+      page.find('h3.facet-field-heading', text: 'Topic').click
       expect(page).to have_selector(".panel-collapse", visible: true)
     end
     within(".blacklight-subject_ssim") do

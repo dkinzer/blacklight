@@ -95,7 +95,7 @@ module Blacklight::Controller
 
   # Returns a list of Searches from the ids in the user's history.
   def searches_from_history
-    session[:history].blank? ? Search.none : Search.where(id: session[:history]).order("updated_at desc")
+    session[:history].blank? ? ::Search.none : ::Search.where(id: session[:history]).order("updated_at desc")
   end
 
   # Should be provided by authentication provider
@@ -129,6 +129,7 @@ module Blacklight::Controller
   # When a user logs in, transfer any saved searches or bookmarks to the current_user
   def transfer_guest_user_actions_to_current_user
     return unless respond_to?(:current_user) && respond_to?(:guest_user) && current_user && guest_user
+
     current_user_searches = current_user.searches.pluck(:query_params)
     current_user_bookmarks = current_user.bookmarks.pluck(:document_id)
 

@@ -42,6 +42,7 @@ module Blacklight
           document_unique_id_param: :ids,
           # Default values of parameters to send when requesting a single document
           default_document_solr_params: {},
+          fetch_many_document_params: {},
           document_pagination_params: {},
           ##
           # == Response models
@@ -124,7 +125,9 @@ module Blacklight
           # proc for determining whether the session is a crawler/bot
           # ex.: crawler_detector: lambda { |req| req.env['HTTP_USER_AGENT'] =~ /bot/ }
           crawler_detector: nil,
-          autocomplete_suggester: 'mySuggester'
+          autocomplete_suggester: 'mySuggester',
+          raw_endpoint: OpenStructWithHashAccess.new(enabled: false),
+          track_search_session: true
           }
         end
         # rubocop:enable Metrics/MethodLength
@@ -240,6 +243,12 @@ module Blacklight
       # Find the facet field configuration for the solr field, or provide a default.
       facet_fields.values.find { |v| v.field.to_s == field.to_s } ||
         FacetField.new(field: field).normalize!
+    end
+
+    # @param [String] group (nil) a group name of facet fields
+    # @return [Array<String>] a list of the facet field names from the configuration
+    def facet_field_names(group = nil)
+      facet_fields.select { |_facet, opts| group == opts[:group] }.values.map(&:field)
     end
 
     # Add any configured facet fields to the default solr parameters hash

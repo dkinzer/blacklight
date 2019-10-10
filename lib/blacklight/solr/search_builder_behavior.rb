@@ -95,7 +95,8 @@ module Blacklight::Solr
         f_request_params = blacklight_params[:f]
 
         f_request_params.each_pair do |facet_field, value_list|
-          next unless blacklight_config.facet_fields[facet_field.to_s].present?
+          next if blacklight_config.facet_fields[facet_field.to_s].blank?
+
           Array(value_list).reject(&:blank?).each do |value|
             solr_parameters.append_filter_query facet_value_to_fq_string(facet_field, value)
           end
@@ -167,7 +168,7 @@ module Blacklight::Solr
     ###
     # copy sorting params from BL app over to solr
     def add_sorting_to_solr(solr_parameters)
-      solr_parameters[:sort] = sort unless sort.blank?
+      solr_parameters[:sort] = sort if sort.present?
     end
 
     # Remove the group parameter if we've faceted on the group field (e.g. for the full results for a group)
@@ -178,7 +179,7 @@ module Blacklight::Solr
     end
 
     def add_facet_paging_to_solr(solr_params)
-      return unless facet.present?
+      return if facet.blank?
 
       facet_config = blacklight_config.facet_fields[facet]
 
