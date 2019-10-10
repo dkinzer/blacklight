@@ -3,13 +3,13 @@ module Blacklight::CatalogHelperBehavior
   extend Deprecation
   self.deprecation_horizon = 'blacklight 8.0'
 
-  include ConfigurationHelperBehavior
-  include ComponentHelperBehavior
-  include FacetsHelperBehavior
-  include RenderConstraintsHelperBehavior
-  include RenderPartialsHelperBehavior
-  include SearchHistoryConstraintsHelperBehavior
-  include SuggestHelperBehavior
+  include Blacklight::ConfigurationHelperBehavior
+  include Blacklight::ComponentHelperBehavior
+  include Blacklight::FacetsHelperBehavior
+  include Blacklight::RenderConstraintsHelperBehavior
+  include Blacklight::RenderPartialsHelperBehavior
+  include Blacklight::SearchHistoryConstraintsHelperBehavior
+  include Blacklight::SuggestHelperBehavior
 
   # @param [Hash] options
   # @option options :route_set the route scope to use when constructing the link
@@ -31,22 +31,21 @@ module Blacklight::CatalogHelperBehavior
 
   ##
   # Override the Kaminari page_entries_info helper with our own, blacklight-aware
-  # implementation.
-  # Displays the "showing X through Y of N" message.
+  # implementation. Why do we have to do this?
+  #  - We need custom counting information for grouped results
+  #  - We need to provide number_with_delimiter strings to i18n keys
+  # If we didn't have to do either one of these, we could get away with removing
+  # this entirely.
   #
   # @param [RSolr::Resource] collection (or other Kaminari-compatible objects)
   # @return [String]
-  def page_entries_info(collection, options = {})
+  def page_entries_info(collection, entry_name: nil)
     return unless show_pagination? collection
 
-    entry_name = if options[:entry_name]
-                   options[:entry_name]
-                 elsif collection.respond_to? :model  # DataMapper
-                   collection.model.model_name.human.downcase
-                 elsif collection.respond_to?(:model_name) && !collection.model_name.nil? # AR, Blacklight::PaginationMethods
-                   collection.model_name.human.downcase
+    entry_name = if entry_name
+                   entry_name.pluralize(collection.size, I18n.locale)
                  else
-                   t('blacklight.entry_name.default')
+                   collection.entry_name(count: collection.size).downcase
                  end
 
     entry_name = entry_name.pluralize unless collection.total_count == 1
@@ -153,8 +152,13 @@ module Blacklight::CatalogHelperBehavior
   #
   # @param [SolrDocument] document
   # @return [String]
-  def render_document_sidebar_partial(_document = @document)
-    render partial: 'show_sidebar'
+  def render_document_sidebar_partial(document = nil)
+    unless document
+      Deprecation.warn(self, 'render_document_sidebar_partial expects one argument ' /
+        '(@document) and you passed none. This behavior will be removed in version 8')
+      document = @document
+    end
+    render 'show_sidebar', document: document
   end
 
   ##
@@ -297,7 +301,7 @@ module Blacklight::CatalogHelperBehavior
     end
 
     if params['f'].present?
-      constraints += params['f'].to_unsafe_h.collect { |key, value| render_search_to_page_title_filter(key, value) }
+      constraints += params['f'].to_unsafe_h.collect { |key, value| render_search_to_page_title_filter(key, Array(value)) }
     end
 
     constraints.join(' / ')

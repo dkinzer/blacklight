@@ -6,7 +6,6 @@ module Blacklight
     # This could be skipped if you want to use webpacker
     def add_javascript_dependencies
       gem 'bootstrap', '~> 4.0'
-      gem 'popper_js'
       gem 'twitter-typeahead-rails', '0.11.1.pre.corejavascript'
     end
 
@@ -17,7 +16,6 @@ module Blacklight
       return if has_blacklight_assets?
 
       contents = "\n//\n// Required by Blacklight\n"
-      contents += "//= require jquery\n"
       contents += "//= require popper\n"
       contents += "// Twitter Typeahead for autocomplete\n"
       contents += "//= require twitter/typeahead\n"
@@ -32,6 +30,10 @@ module Blacklight
 
       insert_into_file "app/assets/javascripts/application.js", after: marker do
         contents
+      end
+
+      insert_into_file "app/assets/javascripts/application.js", before: '//= require rails-ujs' do
+        "//= require jquery3\n"
       end
     end
 

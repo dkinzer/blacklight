@@ -4,7 +4,7 @@ module Blacklight
   # They are only dependent on `blacklight_config` and `@response`
   #
   module Facet
-    delegate :facet_configuration_for_field, to: :blacklight_config
+    delegate :facet_configuration_for_field, :facet_field_names, to: :blacklight_config
 
     def facet_paginator(field_config, response_data)
       blacklight_config.facet_paginator_class.new(
@@ -18,23 +18,34 @@ module Blacklight
 
     # @param fields [Array<String>] a list of facet field names
     # @return [Array<Solr::Response::Facets::FacetField>]
-    def facets_from_request(fields = facet_field_names)
-      fields.map { |field| facet_by_field_name(field) }.compact
+    def facets_from_request(fields = facet_field_names, response = nil)
+      unless response
+        Deprecation.warn(self, 'Calling facets_from_request without passing the ' \
+          'second argument (response) is deprecated and will be removed in Blacklight ' \
+          '8.0.0')
+        response = @response
+      end
+      fields.map { |field| facet_by_field_name(field, response) }.compact
     end
 
-    # @return [Array<String>] a list of the facet field names from the configuration
-    def facet_field_names
-      blacklight_config.facet_fields.values.map(&:field)
+    def facet_group_names
+      blacklight_config.facet_fields.map { |_facet, opts| opts[:group] }.uniq
     end
 
     # Get a FacetField object from the @response
-    def facet_by_field_name(field_or_field_name)
+    def facet_by_field_name(field_or_field_name, response = nil)
+      unless response
+        Deprecation.warn(self, 'Calling facet_by_field_name without passing the ' \
+          'second argument (response) is deprecated and will be removed in Blacklight ' \
+          '8.0.0')
+        response = @response
+      end
       case field_or_field_name
       when String, Symbol
         facet_field = facet_configuration_for_field(field_or_field_name)
-        @response.aggregations[facet_field.field]
+        response.aggregations[facet_field.field]
       when Blacklight::Configuration::FacetField
-        @response.aggregations[field_or_field_name.field]
+        response.aggregations[field_or_field_name.field]
       else
         # is this really a useful case?
         field_or_field_name

@@ -2,28 +2,47 @@
 
 module Blacklight
   class Icon
-    attr_reader :icon_name
+    attr_reader :icon_name, :aria_hidden, :label, :role
     ##
     # @param [String, Symbol] icon_name
     # @param [Hash] options
     # @param [String] classes additional classes separated by a string
-    def initialize(icon_name, classes: '')
+    # @param [Boolean] aria_hidden include aria_hidden attribute
+    # @param [Boolean] label include <title> and aria-label as part of svg
+    # @param [String] role role attribute to be included in svg
+    def initialize(icon_name, classes: '', aria_hidden: false, label: true, role: 'image')
       @icon_name = icon_name
       @classes = classes
+      @aria_hidden = aria_hidden
+      @label = label
+      @role = role
     end
 
     ##
-    # Returns the raw source, but you could extend this to add additional attributes
+    # Returns an updated version of the svg source
     # @return [String]
     def svg
-      file_source
+      svg = ng_xml.at_xpath('svg')
+      svg['role'] = role
+      svg['aria-labelled-by'] = unique_id if label
+      svg.add_child("<title id='#{unique_id}'>#{icon_label}</title>") if label
+      ng_xml.to_xml
+    end
+
+    def icon_label
+      I18n.translate("blacklight.icon.#{icon_name}", default: "#{icon_name} icon")
+    end
+
+    def unique_id
+      @unique_id ||= "bl-icon-#{icon_name}-#{SecureRandom.hex(8)}"
     end
 
     ##
     # @return [Hash]
     def options
       {
-        class: classes
+        class: classes,
+        "aria-hidden": (true if aria_hidden)
       }
     end
 
@@ -37,7 +56,12 @@ module Blacklight
     # @return [String]
     def file_source
       raise Blacklight::Exceptions::IconNotFound, "Could not find #{path}" if file.blank?
+
       file.source.force_encoding('UTF-8')
+    end
+
+    def ng_xml
+      @ng_xml ||= Nokogiri::XML(file_source).remove_namespaces!
     end
 
     private

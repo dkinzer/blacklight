@@ -4,11 +4,10 @@ RSpec.describe Blacklight::Rendering::Pipeline do
   include Capybara::RSpecMatchers
   let(:document) { instance_double(SolrDocument) }
   let(:context) { double }
-  let(:options) { double }
-  let(:presenter) { described_class.new(values, field_config, document, context, options) }
+  let(:options) { double('options') }
 
-  describe "render" do
-    subject { presenter.render }
+  describe '.render' do
+    subject { described_class.render(values, field_config, document, context, options) }
 
     let(:values) { %w[a b] }
     let(:field_config) { Blacklight::Configuration::NullField.new }
@@ -28,16 +27,37 @@ RSpec.describe Blacklight::Rendering::Pipeline do
 
       it { is_expected.to have_selector("span[@itemprop='some-prop']", text: "a") }
     end
+
+    it 'sets the operations on the instance as equal to the class variable' do
+      allow(described_class).to receive(:new)
+        .and_return(instance_double(described_class, render: true))
+      subject
+      expect(described_class).to have_received(:new)
+        .with(values, field_config, document, context, described_class.operations, options)
+    end
   end
 
-  describe "#operations" do
+  describe '.operations' do
     subject { described_class.operations }
 
     it {
-      is_expected.to eq [Blacklight::Rendering::HelperMethod,
-                         Blacklight::Rendering::LinkToFacet,
-                         Blacklight::Rendering::Microdata,
-                         Blacklight::Rendering::Join]
+      expect(subject).to eq [Blacklight::Rendering::HelperMethod,
+                             Blacklight::Rendering::LinkToFacet,
+                             Blacklight::Rendering::Microdata,
+                             Blacklight::Rendering::Join]
     }
+  end
+
+  describe '#operations' do
+    subject(:operations) { presenter.operations }
+
+    let(:presenter) { described_class.new(values, field_config, document, context, steps, options) }
+    let(:steps) { [Blacklight::Rendering::HelperMethod] }
+    let(:values) { ['a'] }
+    let(:field_config) { Blacklight::Configuration::NullField.new }
+
+    it 'sets the operations to the value passed to the initializer' do
+      expect(operations).to eq steps
+    end
   end
 end

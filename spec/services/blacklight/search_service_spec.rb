@@ -11,7 +11,8 @@
 RSpec.describe Blacklight::SearchService, api: true do
   subject { service }
 
-  let(:service) { described_class.new(blacklight_config, user_params) }
+  let(:context) { { whatever: :value } }
+  let(:service) { described_class.new(config: blacklight_config, user_params: user_params, **context) }
   let(:repository) { Blacklight::Solr::Repository.new(blacklight_config) }
   let(:user_params) { {} }
 
@@ -27,6 +28,24 @@ RSpec.describe Blacklight::SearchService, api: true do
   before do
     allow(service).to receive(:repository).and_return(repository)
     service.repository.connection = blacklight_solr
+  end
+
+  describe '#search_builder_class' do
+    subject { service.send(:search_builder_class) }
+
+    it 'defaults to the value in the config' do
+      expect(subject).to eq SearchBuilder
+    end
+
+    context 'when the search_builder_class is passed in' do
+      let(:klass) { double("Search builder") }
+
+      let(:service) { described_class.new(config: blacklight_config, user_params: user_params, search_builder_class: klass) }
+
+      it 'uses the passed value' do
+        expect(subject).to eq klass
+      end
+    end
   end
 
   # SPECS FOR SEARCH RESULTS FOR QUERY
@@ -314,6 +333,24 @@ RSpec.describe Blacklight::SearchService, api: true do
     end
   end
 
+  describe 'Get multiple documents By Id', integration: true do
+    let(:doc_id) { '2007020969' }
+    let(:bad_id) { 'redrum' }
+    let(:response) { service.fetch([doc_id]).first }
+
+    before do
+      blacklight_config.fetch_many_document_params[:fl] = 'id,format'
+    end
+
+    it 'has the expected value in the id field' do
+      expect(response.documents.first.id).to eq doc_id
+    end
+
+    it 'returns all the requested fields' do
+      expect(response.documents.first['format']).to eq ['Book']
+    end
+  end
+
   # SPECS FOR SPELLING SUGGESTIONS VIA SEARCH
   describe "Searches should return spelling suggestions", integration: true do
     context "for just-poor-enough-query term" do
@@ -447,6 +484,12 @@ RSpec.describe Blacklight::SearchService, api: true do
 
     it 'contains the search suggestions as the second element in the response' do
       expect(service.opensearch_response.last).to match_array %w[A B C]
+    end
+  end
+
+  describe '#context' do
+    it 'has a context attribute' do
+      expect(subject.context).to eq context
     end
   end
 end

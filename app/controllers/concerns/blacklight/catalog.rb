@@ -4,6 +4,7 @@ module Blacklight::Catalog
 
   include Blacklight::Base
   include Blacklight::Facet
+  include Blacklight::Searchable
 
   # The following code is executed when someone includes blacklight::catalog in their
   # own controller.
@@ -53,6 +54,14 @@ module Blacklight::Catalog
     end
   end
 
+  # get a single document from the index
+  def raw
+    raise(ActionController::RoutingError, 'Not Found') unless blacklight_config.raw_endpoint.enabled
+
+    _, @document = search_service.fetch(params[:id])
+    render json: @document
+  end
+
   # updates the search counter (allows the show view to paginate)
   def track
     search_session['counter'] = params[:counter]
@@ -72,6 +81,7 @@ module Blacklight::Catalog
   def facet
     @facet = blacklight_config.facet_fields[params[:id]]
     raise ActionController::RoutingError, 'Not Found' unless @facet
+
     @response = search_service.facet_field_response(@facet.key)
     @display_facet = @response.aggregations[@facet.field]
     @pagination = facet_paginator(@facet, @display_facet)
@@ -115,7 +125,7 @@ module Blacklight::Catalog
   # Check if any search parameters have been set
   # @return [Boolean]
   def has_search_parameters?
-    !params[:q].blank? || !params[:f].blank? || !params[:search_field].blank?
+    params[:q].present? || params[:f].present? || params[:search_field].present?
   end
 
   DEFAULT_FACET_LIMIT = 10
@@ -153,10 +163,6 @@ module Blacklight::Catalog
 
   def render_sms_action?(_config, _options)
     sms_mappings.present?
-  end
-
-  def search_service
-    search_service_class.new(blacklight_config, search_state.to_h)
   end
 
   ##
@@ -284,10 +290,6 @@ module Blacklight::Catalog
 
   def start_new_search_session?
     action_name == "index"
-  end
-
-  def suggestions_service
-    Blacklight::SuggestSearch.new(params, search_service.repository).suggestions
   end
 
   def determine_layout

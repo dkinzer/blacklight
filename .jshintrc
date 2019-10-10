@@ -1,4 +1,5 @@
 {
+  "asi": true,
   "browser": true,
   "jquery": true,
   "node": true,
@@ -15,6 +16,7 @@
   "unused": true,
   "eqnull": true,
   "predef": [
-    "Blacklight"
+    "Blacklight",
+    "Rails"
   ]
 }

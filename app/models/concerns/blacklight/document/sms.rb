@@ -8,15 +8,15 @@ module Blacklight::Document::Sms
     if config
       body = config.sms_fields.map do |name, field|
         values = [self[name]].flatten
-        "#{field.label} #{values.first}" unless self[name].blank?
+        "#{field.label} #{values.first}" if self[name].present?
       end
     end
 
     # Use to_semantic_values for backwards compatibility
     if body.empty?
       semantics = to_semantic_values
-      body << I18n.t('blacklight.sms.text.title', value: semantics[:title].first) unless semantics[:title].blank?
-      body << I18n.t('blacklight.sms.text.author', value: semantics[:author].first) unless semantics[:author].blank?
+      body << I18n.t('blacklight.sms.text.title', value: semantics[:title].first) if semantics[:title].present?
+      body << I18n.t('blacklight.sms.text.author', value: semantics[:author].first) if semantics[:author].present?
     end
 
     return body.join unless body.empty?

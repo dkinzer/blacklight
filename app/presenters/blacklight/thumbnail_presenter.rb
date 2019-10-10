@@ -6,6 +6,7 @@ module Blacklight
 
     # @param [SolrDocument] document
     # @param [ActionView::Base] view_context scope for linking and generating urls
+    #                                        as well as for invoking "thumbnail_method"
     # @param [Blacklight::Configuration::ViewConfig] view_config
     def initialize(document, view_context, view_config)
       @document = document
@@ -33,6 +34,7 @@ module Blacklight
     def thumbnail_tag image_options = {}, url_options = {}
       value = thumbnail_value(image_options)
       return value if value.nil? || url_options[:suppress_link]
+
       view_context.link_to_document document, value, url_options
     end
 

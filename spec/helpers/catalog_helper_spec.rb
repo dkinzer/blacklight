@@ -62,15 +62,6 @@ RSpec.describe CatalogHelper do
         expect(html).to eq "<strong>1</strong> entry found"
         expect(html).to be_html_safe
       end
-
-      it "uses the model_name from the response" do
-        response = mock_response total: 1
-        allow(response).to receive(:model_name).and_return(double(human: 'thingy'))
-
-        html = page_entries_info(response)
-        expect(html).to eq "<strong>1</strong> thingy found"
-        expect(html).to be_html_safe
-      end
     end
 
     it "with a single page of results" do
@@ -388,8 +379,17 @@ RSpec.describe CatalogHelper do
     end
 
     let(:blacklight_config) { Blacklight::Configuration.new }
-    let(:params) { ActionController::Parameters.new(q: 'foobar', f: { format: ["Book"] }) }
 
-    it { is_expected.to eq "foobar / Format: Book" }
+    context 'when the f param is an array' do
+      let(:params) { ActionController::Parameters.new(q: 'foobar', f: { format: ["Book"] }) }
+
+      it { is_expected.to eq "foobar / Format: Book" }
+    end
+
+    context 'when the f param is not an array' do
+      let(:params) { ActionController::Parameters.new(q: 'foobar', f: { format: 'Book' }) }
+
+      it { is_expected.to eq "foobar / Format: Book" }
+    end
   end
 end

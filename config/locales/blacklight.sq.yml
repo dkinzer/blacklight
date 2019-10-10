@@ -12,6 +12,10 @@ sq:
       next: 'Tjetra &raquo;'
 
   blacklight:
+    skip_links:
+      main_content: 'Shkoni tek përmbajtja kryesore'
+      search_field: 'Shkoni në kërkim'
+      first_result: 'Shkoni te rezultati i parë i kërkimit'
     header_links:
       login: 'Hyr'
       logout: 'Dil'
@@ -134,11 +138,13 @@ sq:
         invalid_solr_id: "Na vjen keq, ju keni kërkuar një të dhënë që nuk ekziston."
       per_page:
         label: '%{count}<span class="sr-only"> për faqe</span>'
-        button_label: '%{count} për faqe'
+        button_label: '%{count} për faqe' # TODO: Remove during major release
+        button_label_html: '%{count}<span class="d-none d-sm-inline"> për faqe</span>'
         title: 'Numri i rezultateve që do të shfaqen për faqe'
         submit: 'Përditëso'
       sort:
-        label: 'Klasifikoj sipas %{field}'
+        label: 'Klasifikoj sipas %{field}' # TODO: Remove during major release
+        label_html: 'Klasifikoj<span class="d-none d-sm-inline"> sipas %{field}</span>'
         submit: 'klasifiko rezultatet'
       form:
         search_field:
@@ -161,6 +167,9 @@ sq:
         one: '<strong>1 prej 1</strong>'
         other: '<strong>%{current}</strong> prej <strong>%{total}</strong>'
       documents:
+        aria:
+          search_results: 'Rezultatet e kërkimit'
+          limit_search: 'Kufizo këkimin'
         counter: '%{counter}. '
       facets:
         title: 'Kufizo këkimin'
@@ -206,5 +215,11 @@ sq:
 
     entry_name:
       default: 'entry'
+      grouped:
+        default: 'rezultat i grupuar'
 
     did_you_mean: 'A keni menduar: %{options}?'
+
+    main:
+      aria:
+        main_container: 'Përmbajtja kryesore'

@@ -7,8 +7,14 @@ module Blacklight::FacetsHelperBehavior
   #
   # @param [Array<String>] fields
   # @return [Boolean]
-  def has_facet_values? fields = facet_field_names
-    facets_from_request(fields).any? { |display_facet| should_render_facet?(display_facet) }
+  def has_facet_values? fields = facet_field_names, response = nil
+    unless response
+      Deprecation.warn(self, 'Calling has_facet_values? without passing the ' \
+        'second argument (response) is deprecated and will be removed in Blacklight ' \
+        '8.0.0')
+      response = @response
+    end
+    facets_from_request(fields, response).any? { |display_facet| should_render_facet?(display_facet) }
   end
 
   ##
@@ -17,9 +23,24 @@ module Blacklight::FacetsHelperBehavior
   #
   # @param [Array<String>] fields
   # @param [Hash] options
+  # @options options [Blacklight::Solr::Response] :response the Solr response object
   # @return String
-  def render_facet_partials fields = facet_field_names, options = {}
-    safe_join(facets_from_request(fields).map do |display_facet|
+  def render_facet_partials fields = nil, options = {}
+    unless fields
+      Deprecation.warn(self, 'Calling render_facet_partials without passing the ' \
+        'first argument (fields) is deprecated and will be removed in Blacklight ' \
+        '8.0.0')
+      fields = facet_field_names
+    end
+
+    response = options.delete(:response)
+    unless response
+      Deprecation.warn(self, 'Calling render_facet_partials without passing the ' \
+        'response keyword is deprecated and will be removed in Blacklight ' \
+        '8.0.0')
+      response = @response
+    end
+    safe_join(facets_from_request(fields, response).map do |display_facet|
       render_facet_limit(display_facet, options)
     end.compact, "\n")
   end
@@ -38,6 +59,7 @@ module Blacklight::FacetsHelperBehavior
   def render_facet_limit(display_facet, options = {})
     field_config = facet_configuration_for_field(display_facet.name)
     return unless should_render_facet?(display_facet, field_config)
+
     options = options.dup
     options[:partial] ||= facet_partial_name(display_facet)
     options[:layout] ||= "facet_layout" unless options.key?(:layout)
@@ -77,6 +99,7 @@ module Blacklight::FacetsHelperBehavior
   # @return [Boolean]
   def should_render_facet? display_facet, facet_config = nil
     return false if display_facet.items.blank?
+
     # display when show is nil or true
     facet_config ||= facet_configuration_for_field(display_facet.name)
     should_render_field?(facet_config, display_facet)
@@ -178,7 +201,7 @@ module Blacklight::FacetsHelperBehavior
   # @param [String] field
   # @return [Boolean]
   def facet_field_in_params? field
-    !facet_params(field).blank?
+    facet_params(field).present?
   end
 
   ##
@@ -223,8 +246,7 @@ module Blacklight::FacetsHelperBehavior
       facet_config.query[value][:label]
     elsif facet_config.date
       localization_options = facet_config.date == true ? {} : facet_config.date
-
-      l(value.to_datetime, localization_options)
+      l(Time.zone.parse(value), localization_options)
     else
       value
     end

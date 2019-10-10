@@ -18,11 +18,11 @@
 
    Pass in options for your class name and labels:
    $("form.something").blCheckboxSubmit({
-        checked_label: "Selected",
-        unchecked_label: "Select",
-        progress_label: "Saving...",
         //cssClass is added to elements added, plus used for id base
         cssClass: "toggle_my_kinda_form",
+        error: function() {
+          #optional callback
+        },
         success: function(after_success_check_state) {
           #optional callback
         }
@@ -73,10 +73,10 @@
                //Set the Rails hidden field that fakes an HTTP verb
                //properly for current state action.
                form.find('input[name=_method]').val('delete');
-               span.text(form.attr('data-present'));
+               span.html(form.attr('data-present'));
             } else {
                form.find('input[name=_method]').val('put');
-               span.text(form.attr('data-absent'));
+               span.html(form.attr('data-absent'));
             }
           }
 
@@ -84,7 +84,7 @@
         updateStateFor(checked);
 
         checkbox.click(function() {
-            span.text(form.attr('data-inprogress'));
+            span.html(form.attr('data-inprogress'));
             label.attr('disabled', 'disabled');
             checkbox.attr('disabled', 'disabled');
 
@@ -94,10 +94,9 @@
                 type: form.attr('method').toUpperCase(),
                 data: form.serialize(),
                 error: function() {
-                   alert('Error');
-                   updateStateFor(checked);
                    label.removeAttr('disabled');
                    checkbox.removeAttr('disabled');
+                   options.error.call();
                 },
                 success: function(data, status, xhr) {
                   //if app isn't running at all, xhr annoyingly
@@ -109,10 +108,9 @@
                     checkbox.removeAttr('disabled');
                     options.success.call(form, checked, xhr.responseJSON);
                   } else {
-                    alert('Error');
-                    updateStateFor(checked);
                     label.removeAttr('disabled');
                     checkbox.removeAttr('disabled');
+                    options.error.call();
                   }
                 }
             });
@@ -128,6 +126,9 @@
   $.fn.blCheckboxSubmit.defaults =  {
             //cssClass is added to elements added, plus used for id base
             cssClass: 'blCheckboxSubmit',
+            error: function() {
+              alert("Error");
+            },
             success: function() {} //callback
   };
 })(jQuery);

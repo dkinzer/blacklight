@@ -2,16 +2,15 @@
 # SearchService returns search results from the repository
 module Blacklight
   class SearchService
-    def initialize(blacklight_config, user_params = {})
-      @blacklight_config = blacklight_config
+    def initialize(config:, user_params: {}, search_builder_class: config.search_builder_class, **context)
+      @blacklight_config = config
       @user_params = user_params
+      @search_builder_class = search_builder_class
+      @context = context
     end
 
-    # TODO: Can this be private?
-    attr_reader :blacklight_config
-
-    # Override this method to use a search builder other than the one in the config
-    delegate :search_builder_class, to: :blacklight_config
+    # The blacklight_config + controller are accessed by the search_builder
+    attr_reader :blacklight_config, :context
 
     def search_builder
       search_builder_class.new(self)
@@ -86,11 +85,10 @@ module Blacklight
       [user_params[:q], response.documents.flat_map { |doc| doc[field] }.uniq]
     end
 
-    delegate :repository, to: :blacklight_config
-
     private
 
-    attr_reader :user_params
+    attr_reader :search_builder_class, :user_params
+    delegate :repository, to: :blacklight_config
 
     ##
     # The key to use to retrieve the grouped field to display
@@ -139,6 +137,7 @@ module Blacklight
       query = search_builder
               .with(user_params)
               .where(blacklight_config.document_model.unique_key => ids)
+              .merge(blacklight_config.fetch_many_document_params)
               .merge(extra_controller_params)
 
       solr_response = repository.search(query)

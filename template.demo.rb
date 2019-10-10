@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-gem "blacklight", ">= 6.1"
+gem 'blacklight', '>= 7.0'
 
 run "bundle install"
 
 # run the blacklight install generator
-options = ENV.fetch("BLACKLIGHT_INSTALL_OPTIONS", '--devise --marc --solr_version=latest')
+options = ENV.fetch("BLACKLIGHT_INSTALL_OPTIONS", '--devise --marc')
 
 generate 'blacklight:install', options
 
