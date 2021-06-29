@@ -33,9 +33,8 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
 
   describe "#default_document_index_view_type" do
     it "uses the first view with default set to true" do
-      blacklight_config.view.a
-      blacklight_config.view.b
-      blacklight_config.view.b.default = true
+      blacklight_config.view.a({})
+      blacklight_config.view.b(default: true)
       expect(helper.default_document_index_view_type).to eq :b
     end
 
@@ -48,8 +47,8 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
   describe "#document_index_views" do
     before do
       blacklight_config.view.abc = false
-      blacklight_config.view.def.if = false
-      blacklight_config.view.xyz.unless = true
+      blacklight_config.view.def(if: false)
+      blacklight_config.view.xyz(unless: true)
     end
 
     it "filters views using :if/:unless configuration" do
@@ -62,8 +61,8 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
 
   describe '#document_index_view_controls' do
     before do
-      blacklight_config.view.a
-      blacklight_config.view.b.display_control = false
+      blacklight_config.view.a({})
+      blacklight_config.view.b(display_control: false)
     end
 
     it "filters index views to those set to display controls" do
@@ -103,6 +102,10 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
   describe "#document_show_link_field" do
     let(:document) { SolrDocument.new id: 123, a: 1, b: 2, c: 3 }
 
+    before do
+      allow(Deprecation).to receive(:warn)
+    end
+
     it "allows single values" do
       blacklight_config.index.title_field = :a
       f = helper.document_show_link_field document
@@ -118,8 +121,7 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
 
   describe "#view_label" do
     it "looks up the label to display for the view" do
-      allow(blacklight_config).to receive(:view).and_return("my_view" => double(label: "some label", title: nil))
-      allow(helper).to receive(:field_label).with(:"blacklight.search.view_title.my_view", :"blacklight.search.view.my_view", "some label", nil, "My view")
+      allow(blacklight_config).to receive(:view).and_return("my_view" => double(display_label: "some label"))
 
       helper.view_label "my_view"
     end
@@ -192,9 +194,9 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
   describe "#per_page_options_for_select" do
     it "is the per-page values formatted as options_for_select" do
       allow(helper).to receive_messages(blacklight_config: double(per_page: [11, 22, 33]))
-      expect(helper.per_page_options_for_select).to include ["11<span class=\"sr-only\"> per page</span>", 11]
-      expect(helper.per_page_options_for_select).to include ["22<span class=\"sr-only\"> per page</span>", 22]
-      expect(helper.per_page_options_for_select).to include ["33<span class=\"sr-only\"> per page</span>", 33]
+      expect(helper.per_page_options_for_select).to include ["11<span class=\"sr-only visually-hidden\"> per page</span>", 11]
+      expect(helper.per_page_options_for_select).to include ["22<span class=\"sr-only visually-hidden\"> per page</span>", 22]
+      expect(helper.per_page_options_for_select).to include ["33<span class=\"sr-only visually-hidden\"> per page</span>", 33]
     end
   end
 
@@ -267,8 +269,13 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
       it 'handles a found key' do
         expect(helper.label_for_search_field('my-key')).to eq 'My Field'
       end
+
       it 'handles a missing key' do
         expect(helper.label_for_search_field('not-found')).to eq 'Not Found'
+      end
+
+      it 'handles a missing field' do
+        expect(helper.label_for_search_field(nil)).to eq nil
       end
     end
 
@@ -278,6 +285,7 @@ RSpec.describe Blacklight::ConfigurationHelperBehavior do
       it 'handles a found key' do
         expect(helper.sort_field_label('my-key')).to eq 'My Field'
       end
+
       it 'handles a missing key' do
         expect(helper.sort_field_label('not-found')).to eq 'Not Found'
       end

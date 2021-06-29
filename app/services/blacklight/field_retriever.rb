@@ -2,14 +2,22 @@
 
 module Blacklight
   class FieldRetriever
-    # @param [SolrDocument] document
+    # @param [Blacklight::Document] document
     # @param [Blacklight::Configuration::Field] field_config solr field configuration
-    def initialize(document, field_config)
+    # @param [ActionView::Base] Rails rendering context
+    def initialize(document, field_config, view_context = nil)
       @document = document
       @field_config = field_config
+      @view_context = view_context
     end
 
-    attr_reader :document, :field_config
+    # @return [Blacklight::Document]
+    attr_reader :document
+    # @return [Blacklight::Configuration::Field]
+    attr_reader :field_config
+    # @return [ActionView::Base]
+    attr_reader :view_context
+
     delegate :field, to: :field_config
 
     # @return [Array]
@@ -19,7 +27,9 @@ module Blacklight
           retrieve_highlight
         elsif field_config.accessor
           retieve_using_accessor
-        elsif field_config
+        elsif field_config.values
+          retrieve_values
+        else
           retrieve_simple
         end
       )
@@ -54,6 +64,17 @@ module Blacklight
     def retrieve_highlight
       # retrieve the document value from the highlighting response
       document.highlight_field(field_config.field).map(&:html_safe) if document.has_highlight_field? field_config.field
+    end
+
+    def retrieve_values
+      values_method = field_config.values
+
+      if values_method.respond_to?(:arity) && values_method.arity.abs == 2
+        Deprecation.warn(self, ":values parameter for field #{field_config.key} only accepts 2 arguments; should accept 3")
+        values_method.call(field_config, document)
+      else
+        values_method.call(field_config, document, view_context)
+      end
     end
   end
 end

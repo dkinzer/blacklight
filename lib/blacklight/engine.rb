@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'view_component/engine'
+
 module Blacklight
   class Engine < Rails::Engine
     engine_name "blacklight"
@@ -6,14 +8,10 @@ module Blacklight
     # BlacklightHelper is needed by all helpers, so we inject it
     # into action view base here.
     initializer 'blacklight.helpers' do
-      ActionView::Base.send :include, BlacklightHelper
+      config.after_initialize do
+        ActionView::Base.include BlacklightHelper
+      end
     end
-
-    config.autoload_paths += %W(
-      #{config.root}/app/presenters
-      #{config.root}/app/controllers/concerns
-      #{config.root}/app/models/concerns
-    )
 
     # This makes our rake tasks visible.
     rake_tasks do

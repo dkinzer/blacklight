@@ -23,6 +23,7 @@ pt-BR:
   blacklight:
     application_name: 'Blacklight'
     skip_links:
+      label: 'pular links'
       main_content: 'Ir para o conteúdo principal'
       search_field: 'Ir para a pesquisa'
       first_result: 'Ir para o primeiro resultado da pesquisa'
@@ -152,6 +153,7 @@ pt-BR:
         button_label_html: '%{count}<span class="d-none d-sm-inline"> por página</span>'
         title: 'Número de resultados para mostrar por página'
         submit: 'Atualizar'
+        aria_label: 'Navegação de resultados'
       sort:
         label: 'Ordenar por %{field}' # TODO: Remove during major release
         label_html: 'Ordenar<span class="d-none d-sm-inline"> por %{field}</span>'
@@ -189,10 +191,15 @@ pt-BR:
           count: 'Ordenar por Número'
           index: 'Ordem Alfabética A-Z'
         count: '%{number}'
-        more_html: 'mais <span class="sr-only">%{field_name}</span> »'
+        more_html: 'mais <span class="sr-only visually-hidden">%{field_name}</span> »'
         selected:
           remove: '[remover]'
         missing: [Ausência]
+        pivot:
+          show: Abrir
+          hide: Fechar
+        group:
+          toggle: 'mais »'
       group:
         more: 'mais »'
       filters:

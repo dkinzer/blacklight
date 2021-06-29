@@ -18,10 +18,6 @@ RSpec.describe CatalogHelper do
     mock_response
   end
 
-  def render_grouped_response?
-    false
-  end
-
   describe "page_entries_info" do
     it "with no results" do
       @response = mock_response total: 0
@@ -39,11 +35,13 @@ RSpec.describe CatalogHelper do
       expect(html).to be_html_safe
     end
 
-    it "with an empty page of results" do
-      @response = double(limit_value: -1)
+    context "when response.entry_name is nil" do
+      it "does not raise an error" do
+        collection = mock_response total: 10
+        allow(collection).to receive(:entry_name).and_return(nil)
 
-      html = page_entries_info(@response)
-      expect(html).to be_blank
+        expect { page_entries_info(collection) }.not_to raise_error
+      end
     end
 
     describe "with a single result" do
@@ -95,6 +93,7 @@ RSpec.describe CatalogHelper do
       expect(html).to eq "<strong>41</strong> - <strong>47</strong> of <strong>47</strong>"
       expect(html).to be_html_safe
     end
+
     it "works with rows the same as per_page" do
       @response = mock_response total: 47, rows: 20, current_page: 2
 
@@ -167,7 +166,7 @@ RSpec.describe CatalogHelper do
 
   describe "should_autofocus_on_search_box?" do
     before do
-      expect(Deprecation).to receive(:warn)
+      allow(Deprecation).to receive(:warn)
     end
 
     it "is focused if we're on a catalog-like index page without query or facet parameters" do
@@ -193,7 +192,7 @@ RSpec.describe CatalogHelper do
 
   describe "has_thumbnail?" do
     before do
-      expect(Deprecation).to receive(:warn)
+      allow(Deprecation).to receive(:warn)
     end
 
     let(:document) { SolrDocument.new(data) }
@@ -232,7 +231,7 @@ RSpec.describe CatalogHelper do
     let(:thumbnail_presenter) { instance_double(Blacklight::ThumbnailPresenter) }
 
     before do
-      expect(Deprecation).to receive(:warn)
+      allow(Deprecation).to receive(:warn)
       allow(helper).to receive(:index_presenter).with(document).and_return(index_presenter)
     end
 
@@ -251,7 +250,7 @@ RSpec.describe CatalogHelper do
 
   describe "thumbnail_url" do
     before do
-      expect(Deprecation).to receive(:warn)
+      allow(Deprecation).to receive(:warn)
     end
 
     it "pulls the configured thumbnail field out of the document" do
@@ -324,7 +323,7 @@ RSpec.describe CatalogHelper do
 
     it "supports view-specific field configuration" do
       allow(helper).to receive(:document_index_view_type).and_return(:some_view_type)
-      blacklight_config.view.some_view_type.display_type_field = :other_type
+      blacklight_config.view.some_view_type(display_type_field: :other_type)
       doc = { other_type: "document" }
       expect(helper.render_document_class(doc)).to eq "blacklight-document"
     end

@@ -166,25 +166,17 @@ RSpec.describe "Facets" do
       expect(page).to have_content "history"
     end
   end
-  it "is collapsed when not selected", js: true do
-    skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
-    visit root_path
 
-    within('#facets .navbar') do
-      page.find('button.navbar-toggler').click
-    end
+  it "is collapsed when not selected", js: true do
+    visit root_path
 
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
     end
   end
-  it "expands when the heading button is clicked", js: true do
-    skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
-    visit root_path
 
-    within('#facets .navbar') do
-      page.find('button.navbar-toggler').click
-    end
+  it "expands when the heading button is clicked", js: true do
+    visit root_path
 
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
@@ -192,13 +184,9 @@ RSpec.describe "Facets" do
       expect(page).to have_selector(".card-body", visible: true)
     end
   end
-  it "expands when the button is clicked", js: true do
-    skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
-    visit root_path
 
-    within('#facets .navbar') do
-      page.find('button.navbar-toggler').click
-    end
+  it "expands when the button is clicked", js: true do
+    visit root_path
 
     within(".blacklight-subject_ssim") do
       expect(page).not_to have_selector(".card-body", visible: true)
@@ -206,13 +194,9 @@ RSpec.describe "Facets" do
       expect(page).to have_selector(".card-body", visible: true)
     end
   end
-  it "keeps selected facets expanded on page load", js: true do
-    skip("Test passes locally but not on Travis.") if ENV['TRAVIS']
-    visit root_path
 
-    within('#facets .navbar') do
-      page.find('button.navbar-toggler').click
-    end
+  it "keeps selected facets expanded on page load", js: true do
+    visit root_path
 
     within(".blacklight-subject_ssim") do
       page.find('h3.facet-field-heading', text: 'Topic').click

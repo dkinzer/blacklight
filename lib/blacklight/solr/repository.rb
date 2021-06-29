@@ -23,7 +23,7 @@ module Blacklight::Solr
       send_and_receive blacklight_config.solr_path, params.reverse_merge(qt: blacklight_config.qt)
     end
 
-    # @param [Hash] params
+    # @param [Hash] request_params
     # @return [Blacklight::Suggest::Response]
     def suggestions(request_params)
       suggest_results = connection.send_and_receive(suggest_handler_path, params: request_params)
@@ -41,7 +41,7 @@ module Blacklight::Solr
     # @return [boolean] true if the repository is reachable
     def ping
       response = connection.send_and_receive 'admin/ping', {}
-      Blacklight.logger.info("Ping [#{connection.uri}] returned: '#{response['status']}'")
+      Blacklight.logger&.info("Ping [#{connection.uri}] returned: '#{response['status']}'")
       response['status'] == "OK"
     end
 
@@ -58,13 +58,22 @@ module Blacklight::Solr
     # @return [Blacklight::Solr::Response] the solr response object
     def send_and_receive(path, solr_params = {})
       benchmark("Solr fetch", level: :debug) do
-        key = blacklight_config.http_method == :post ? :data : :params
-        res = connection.send_and_receive(path, { key => solr_params.to_hash, method: blacklight_config.http_method })
+        res = if solr_params[:json].present?
+                connection.send_and_receive(
+                  path,
+                  data: { params: solr_params.to_hash.except(:json) }.merge(solr_params[:json]).to_json,
+                  method: :post,
+                  headers: { 'Content-Type' => 'application/json' }
+                )
+              else
+                key = blacklight_config.http_method == :post ? :data : :params
+                connection.send_and_receive(path, { key => solr_params.to_hash, method: blacklight_config.http_method })
+              end
 
         solr_response = blacklight_config.response_model.new(res, solr_params, document_model: blacklight_config.document_model, blacklight_config: blacklight_config)
 
-        Blacklight.logger.debug("Solr query: #{blacklight_config.http_method} #{path} #{solr_params.to_hash.inspect}")
-        Blacklight.logger.debug("Solr response: #{solr_response.inspect}") if defined?(::BLACKLIGHT_VERBOSE_LOGGING) && ::BLACKLIGHT_VERBOSE_LOGGING
+        Blacklight.logger&.debug("Solr query: #{blacklight_config.http_method} #{path} #{solr_params.to_hash.inspect}")
+        Blacklight.logger&.debug("Solr response: #{solr_response.inspect}") if defined?(::BLACKLIGHT_VERBOSE_LOGGING) && ::BLACKLIGHT_VERBOSE_LOGGING
         solr_response
       end
     rescue Errno::ECONNREFUSED => e

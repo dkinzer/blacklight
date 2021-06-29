@@ -22,6 +22,7 @@ fr:
   blacklight:
     application_name: 'Blacklight'
     skip_links:
+      label: 'Sauter les liens'
       main_content: 'Aller au contenu principal'
       search_field: 'Aller à la recherche'
       first_result: 'Aller au premier résultat de recherche'
@@ -149,11 +150,12 @@ fr:
         request_error: "Pardon, nous n'avons pas compris votre recherche."
         invalid_solr_id: "Vous avez demandé une notice qui n'existe pas."
       per_page:
-        label: '%{count}<span class="sr-only"> par page</span>'
+        label: '%{count}<span class="sr-only visually-hidden"> par page</span>'
         button_label: '%{count} par page' # TODO: Remove during major release
         button_label_html: '%{count}<span class="d-none d-sm-inline"> par page</span>'
         title: 'Nombre de résultats à afficher par page'
         submit: 'mettre à jour'
+        aria_label: 'Navigation dans les résultats'
       sort:
         label: 'Trier par %{field}' # TODO: Remove during major release
         label_html: 'Trier<span class="d-none d-sm-inline"> par %{field}</span>'
@@ -191,10 +193,15 @@ fr:
           count: 'Du + au - fréquent'
           index: 'Tri de A à Z'
         count: '%{number}'
-        more_html: 'plus <span class="sr-only">%{field_name}</span> »'
+        more_html: 'plus <span class="sr-only visually-hidden">%{field_name}</span> »'
         selected:
           remove: '[ X ]'
         missing: '[manquante]'
+        pivot:
+          show: Ouvrir
+          hide: Fermer
+        group:
+          toggle: 'plus »'
       group:
         more: 'plus »'
       filters:
@@ -227,7 +234,9 @@ fr:
 
 
     entry_name:
-      default: 'résultat'
+      default:
+        one: 'résultat'
+        other: 'résultats'
       grouped:
         default: 'résultat groupé'
 

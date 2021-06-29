@@ -2,20 +2,22 @@
 
 module Blacklight
   class Icon
-    attr_reader :icon_name, :aria_hidden, :label, :role
+    attr_reader :icon_name, :aria_hidden, :label, :role, :additional_options
+
     ##
     # @param [String, Symbol] icon_name
-    # @param [Hash] options
     # @param [String] classes additional classes separated by a string
     # @param [Boolean] aria_hidden include aria_hidden attribute
     # @param [Boolean] label include <title> and aria-label as part of svg
     # @param [String] role role attribute to be included in svg
-    def initialize(icon_name, classes: '', aria_hidden: false, label: true, role: 'image')
+    # @param [Hash] additional_options the way forward instead of named arguments
+    def initialize(icon_name, classes: '', aria_hidden: false, label: true, role: 'img', additional_options: {})
       @icon_name = icon_name
       @classes = classes
       @aria_hidden = aria_hidden
       @label = label
       @role = role
+      @additional_options = additional_options
     end
 
     ##
@@ -23,18 +25,14 @@ module Blacklight
     # @return [String]
     def svg
       svg = ng_xml.at_xpath('svg')
+      svg['aria-label'] = icon_label if label
       svg['role'] = role
-      svg['aria-labelled-by'] = unique_id if label
-      svg.add_child("<title id='#{unique_id}'>#{icon_label}</title>") if label
+      svg.prepend_child("<title>#{icon_label}</title>") if label
       ng_xml.to_xml
     end
 
     def icon_label
-      I18n.translate("blacklight.icon.#{icon_name}", default: "#{icon_name} icon")
-    end
-
-    def unique_id
-      @unique_id ||= "bl-icon-#{icon_name}-#{SecureRandom.hex(8)}"
+      I18n.translate("blacklight.icon.#{icon_name_context}", default: icon_name.to_s.titleize)
     end
 
     ##
@@ -66,6 +64,10 @@ module Blacklight
 
     private
 
+    def icon_name_context
+      [icon_name, additional_options[:label_context]].compact.join('_')
+    end
+
     def file
       # Rails.application.assets is `nil` in production mode (where compile assets is enabled).
       # This workaround is based off of this comment: https://github.com/fphilipe/premailer-rails/issues/145#issuecomment-225992564
@@ -73,7 +75,7 @@ module Blacklight
     end
 
     def classes
-      " blacklight-icons #{@classes} ".strip
+      " blacklight-icons blacklight-icon-#{icon_name} #{@classes} ".strip
     end
   end
 end

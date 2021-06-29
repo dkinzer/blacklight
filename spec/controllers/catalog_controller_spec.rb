@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe CatalogController, api: true do
+  around { |test| Deprecation.silence(Blacklight::Catalog) { test.call } }
+
   let(:doc_id) { '2007020969' }
   let(:mock_response) { instance_double(Blacklight::Solr::Response) }
   let(:mock_document) { instance_double(SolrDocument, export_formats: {}) }
@@ -30,11 +32,13 @@ RSpec.describe CatalogController, api: true do
         expect(assigns(:response).docs).not_to be_empty
         assert_facets_have_values(assigns(:response).aggregations)
       end
+
       it "has docs and facets for existing facet value", integration: true do
         get :index, params: { f: { "format" => 'Book' } }
         expect(assigns(:response).docs).not_to be_empty
         assert_facets_have_values(assigns(:response).aggregations)
       end
+
       it "has docs and facets for non-default results per page", integration: true do
         num_per_page = 7
         get :index, params: { per_page: num_per_page }
@@ -98,6 +102,7 @@ RSpec.describe CatalogController, api: true do
           get :index
           expect(assigns(:response).docs).not_to be_empty
         end
+
         it "gets facets when no query", integration: true do
           get :index
           assert_facets_have_values(assigns(:response).aggregations)
@@ -237,6 +242,11 @@ RSpec.describe CatalogController, api: true do
       expect(session[:search]['per_page']).to eq "15"
     end
 
+    it "records the document id being viewed" do
+      put :track, params: { id: doc_id, counter: 3, document_id: 1234 }
+      expect(session[:search]['document_id']).to eq "1234"
+    end
+
     it "redirects to show action for doc id" do
       put :track, params: { id: doc_id, counter: 3 }
       assert_redirected_to(solr_document_path(doc_id))
@@ -288,6 +298,15 @@ RSpec.describe CatalogController, api: true do
              url_suppl_ssim]
         )
       end
+    end
+  end
+
+  describe 'GET advanced_search' do
+    it 'renders an advanced search form' do
+      get :advanced_search
+      expect(response).to be_successful
+
+      assert_facets_have_values(assigns(:response).aggregations)
     end
   end
 
@@ -456,6 +475,7 @@ RSpec.describe CatalogController, api: true do
       get :suggest, params: { format: 'json' }
       expect(response.body).to eq [].to_json
     end
+
     it 'returns suggestions' do
       get :suggest, params: { format: 'json', q: 'new' }
       json = JSON.parse(response.body)
@@ -468,8 +488,13 @@ RSpec.describe CatalogController, api: true do
     let(:mock_response) { instance_double(Blacklight::Solr::Response, documents: [SolrDocument.new(id: 'my_fake_doc'), SolrDocument.new(id: 'my_other_doc')]) }
 
     before do
+      mock_document.extend(Blacklight::Document::Sms)
+      mock_document.extend(Blacklight::Document::Email)
+      allow(mock_document).to receive(:to_semantic_values).and_return({})
+      allow(mock_document).to receive(:to_model).and_return(SolrDocument.new(id: 'my_fake_doc'))
+
       allow(controller).to receive(:search_service).and_return(search_service)
-      expect(search_service).to receive(:fetch).and_return([mock_response, []])
+      expect(search_service).to receive(:fetch).and_return([mock_response, [mock_document]])
       request.env["HTTP_REFERER"] = "/catalog/#{doc_id}"
       SolrDocument.use_extension(Blacklight::Document::Email)
       SolrDocument.use_extension(Blacklight::Document::Sms)
@@ -486,14 +511,17 @@ RSpec.describe CatalogController, api: true do
         post :email, params: { id: doc_id }
         expect(request.flash[:error]).to eq "You must enter a recipient in order to send this message"
       end
+
       it "gives an error if the email address is not valid" do
         post :email, params: { id: doc_id, to: 'test_bad_email' }
         expect(request.flash[:error]).to eq "You must enter a valid email address"
       end
+
       it "does not give error if no Message parameter is set" do
         post :email, params: { id: doc_id, to: 'test_email@projectblacklight.org' }
         expect(request.flash[:error]).to be_nil
       end
+
       it "redirects back to the record upon success" do
         allow(RecordMailer).to receive(:email_record)
           .with(anything, { to: 'test_email@projectblacklight.org', message: 'xyz', config: config }, hash_including(host: 'test.host'))
@@ -502,6 +530,7 @@ RSpec.describe CatalogController, api: true do
         expect(request.flash[:error]).to be_nil
         expect(request).to redirect_to(solr_document_path(doc_id))
       end
+
       it "renders email_success for XHR requests" do
         post :email, xhr: true, params: { id: doc_id, to: 'test_email@projectblacklight.org' }
         expect(request).to render_template 'email_success'
@@ -520,23 +549,28 @@ RSpec.describe CatalogController, api: true do
         post :sms, params: { id: doc_id, carrier: 'att' }
         expect(request.flash[:error]).to eq "You must enter a recipient's phone number in order to send this message"
       end
+
       it "gives an error when a carrier is not provided" do
         post :sms, params: { id: doc_id, to: '5555555555', carrier: '' }
         expect(request.flash[:error]).to eq "You must select a carrier"
       end
+
       it "gives an error when the phone number is not 10 digits" do
         post :sms, params: { id: doc_id, to: '555555555', carrier: 'txt.att.net' }
         expect(request.flash[:error]).to eq "You must enter a valid 10 digit phone number"
       end
+
       it "gives an error when the carrier is not in our list of carriers" do
         post :sms, params: { id: doc_id, to: '5555555555', carrier: 'no-such-carrier' }
         expect(request.flash[:error]).to eq "You must enter a valid carrier"
       end
+
       it "allows punctuation in phone number" do
         post :sms, params: { id: doc_id, to: '(555) 555-5555', carrier: 'txt.att.net' }
         expect(request.flash[:error]).to be_nil
         expect(request).to redirect_to(solr_document_path(doc_id))
       end
+
       it "sends to the appropriate carrier email address" do
         expect(RecordMailer)
           .to receive(:sms_record)
@@ -544,11 +578,13 @@ RSpec.describe CatalogController, api: true do
           .and_return double(deliver: nil)
         post :sms, params: { id: doc_id, to: '5555555555', carrier: 'txt.att.net' }
       end
+
       it "redirects back to the record upon success" do
         post :sms, params: { id: doc_id, to: '5555555555', carrier: 'txt.att.net' }
         expect(request.flash[:error]).to eq nil
         expect(request).to redirect_to(solr_document_path(doc_id))
       end
+
       it "renders sms_success template for XHR requests" do
         post :sms, xhr: true, params: { id: doc_id, to: '5555555555', carrier: 'txt.att.net' }
         expect(request).to render_template 'sms_success'
@@ -562,6 +598,13 @@ RSpec.describe CatalogController, api: true do
       allow(controller).to receive_messages(find: double(documents: []))
       expect do
         get :show, params: { id: "987654321" }
+      end.to raise_error Blacklight::Exceptions::RecordNotFound
+    end
+
+    it "returns status 404 for exportable actions on records that do not exist" do
+      allow(controller).to receive_messages(find: double(documents: []))
+      expect do
+        get :citation, params: { id: "bad-record-identifer" }
       end.to raise_error Blacklight::Exceptions::RecordNotFound
     end
 

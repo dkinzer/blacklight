@@ -16,16 +16,6 @@ require 'globalid'
 # transformation formats.
 #
 module Blacklight::Document
-  autoload :ActiveModelShim, 'blacklight/document/active_model_shim'
-  autoload :SchemaOrg, 'blacklight/document/schema_org'
-  autoload :CacheKey, 'blacklight/document/cache_key'
-  autoload :DublinCore, 'blacklight/document/dublin_core'
-  autoload :Email, 'blacklight/document/email'
-  autoload :SemanticFields, 'blacklight/document/semantic_fields'
-  autoload :Sms, 'blacklight/document/sms'
-  autoload :Extensions, 'blacklight/document/extensions'
-  autoload :Export, 'blacklight/document/export'
-
   extend ActiveSupport::Concern
   include Blacklight::Document::SchemaOrg
   include Blacklight::Document::SemanticFields
@@ -115,12 +105,13 @@ module Blacklight::Document
   # extendability architecture
   module ClassMethods
     attr_writer :unique_key
+
     def unique_key
       @unique_key ||= 'id'
     end
 
     # Define an attribute reader on a document model
-    # @Example
+    # @example
     #   class SolrDocument
     #     include Blacklight::Solr::Document
     #     attribute :title, Blacklight::Types::String, 'title_tesim'

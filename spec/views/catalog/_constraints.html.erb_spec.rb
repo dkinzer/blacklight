@@ -3,14 +3,15 @@
 RSpec.describe "catalog/constraints" do
   let :blacklight_config do
     Blacklight::Configuration.new do |config|
-      config.view.xyz
+      config.view.xyz({})
     end
   end
 
   it "renders nothing if no constraints are set" do
     allow(view).to receive_messages(query_has_constraints?: false)
+    allow(view).to receive(:blacklight_config).and_return(blacklight_config)
     render partial: "catalog/constraints"
-    expect(rendered).to be_empty
+    expect(rendered.strip).to be_empty
   end
 
   it "renders a start over link" do

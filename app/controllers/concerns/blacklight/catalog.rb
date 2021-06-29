@@ -2,9 +2,14 @@
 module Blacklight::Catalog
   extend ActiveSupport::Concern
 
+  # MimeResponds is part of ActionController::Base, but not ActionController::API
+  include ActionController::MimeResponds
+
   include Blacklight::Base
   include Blacklight::Facet
   include Blacklight::Searchable
+
+  extend Deprecation
 
   # The following code is executed when someone includes blacklight::catalog in their
   # own controller.
@@ -54,6 +59,12 @@ module Blacklight::Catalog
     end
   end
 
+  def advanced_search
+    empty_service = search_service_class.new(config: blacklight_config, user_params: {}, **search_service_context)
+
+    (@response, _deprecated_document_list) = empty_service.search_results
+  end
+
   # get a single document from the index
   def raw
     raise(ActionController::RoutingError, 'Not Found') unless blacklight_config.raw_endpoint.enabled
@@ -67,13 +78,14 @@ module Blacklight::Catalog
     search_session['counter'] = params[:counter]
     search_session['id'] = params[:search_id]
     search_session['per_page'] = params[:per_page]
+    search_session['document_id'] = params[:document_id]
 
     if params[:redirect] && (params[:redirect].starts_with?('/') || params[:redirect] =~ URI::DEFAULT_PARSER.make_regexp)
       uri = URI.parse(params[:redirect])
       path = uri.query ? "#{uri.path}?#{uri.query}" : uri.path
-      redirect_to path, status: 303
+      redirect_to path, status: :see_other
     else
-      redirect_to({ action: :show, id: params[:id] }, status: 303)
+      redirect_to({ action: :show, id: params[:id] }, status: :see_other)
     end
   end
 
@@ -84,7 +96,9 @@ module Blacklight::Catalog
 
     @response = search_service.facet_field_response(@facet.key)
     @display_facet = @response.aggregations[@facet.field]
-    @pagination = facet_paginator(@facet, @display_facet)
+
+    @presenter = (@facet.presenter || Blacklight::FacetFieldPresenter).new(@facet, @display_facet, view_context)
+    @pagination = @presenter.paginator
     respond_to do |format|
       format.html do
         # Draw the partial for the "more" facet modal window:
@@ -114,7 +128,10 @@ module Blacklight::Catalog
   # @return [Array] first value is a Blacklight::Solr::Response and the second
   #                 is a list of documents
   def action_documents
-    search_service.fetch(Array(params[:id]))
+    deprecated_response, @documents = search_service.fetch(Array(params[:id]))
+    raise Blacklight::Exceptions::RecordNotFound if @documents.blank?
+
+    [deprecated_response, @documents]
   end
 
   def action_success_redirect_path
@@ -125,9 +142,10 @@ module Blacklight::Catalog
   # Check if any search parameters have been set
   # @return [Boolean]
   def has_search_parameters?
-    params[:q].present? || params[:f].present? || params[:search_field].present?
+    params[:search_field].present? || search_state.has_constraints?
   end
 
+  # TODO: deprecate this constant with #facet_limit_for
   DEFAULT_FACET_LIMIT = 10
 
   # Look up facet limit for given facet_field. Will look at config, and
@@ -154,6 +172,7 @@ module Blacklight::Catalog
       facet.limit == true ? DEFAULT_FACET_LIMIT : facet.limit
     end
   end
+  deprecation_deprecate facet_limit_for: 'moving to private logic in Blacklight::FacetFieldPresenter'
 
   private
 
@@ -181,8 +200,8 @@ module Blacklight::Catalog
   # @note Make sure your format has a well known mime-type or is registered in config/initializers/mime_types.rb
   # @example
   #   config.index.respond_to.txt = Proc.new { render plain: "A list of docs." }
-  def additional_response_formats format
-    blacklight_config.index.respond_to.each do |key, config|
+  def additional_response_formats(format)
+    blacklight_config.view_config(action_name: :index).respond_to.each do |key, config|
       format.send key do
         case config
         when false
@@ -211,7 +230,7 @@ module Blacklight::Catalog
 
   ##
   # Try to render a response from the document export formats available
-  def document_export_formats format
+  def document_export_formats(format)
     format.any do
       format_name = params.fetch(:format, '').to_sym
       if @response.export_formats.include? format_name
@@ -306,11 +325,11 @@ module Blacklight::Catalog
     # If there are errors coming from the index page, we want to trap those sensibly
 
     if flash[:notice] == flash_notice
-      logger.error "Cowardly aborting rsolr_request_error exception handling, because we redirected to a page that raises another exception"
+      logger&.error "Cowardly aborting rsolr_request_error exception handling, because we redirected to a page that raises another exception"
       raise exception
     end
 
-    logger.error exception
+    logger&.error exception
 
     flash[:notice] = flash_notice
     redirect_to search_action_url

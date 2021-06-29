@@ -6,6 +6,14 @@ zh:
       previous: '&laquo; 上一页'
       next: '下一页 &raquo;'
       truncate: '…'
+      aria:
+        container_label: 分页链接
+        current_page: 当前页面，页面%{page}
+        go_to_page: 前往页面%{page}
+        go_to_previous_page: 转到上一页
+        go_to_next_page: 转到下一页
+        go_to_first_page: 转到第一页
+        go_to_last_page: 转到最后一页
 
     pagination_compact:
       previous: '&laquo; 上一页'
@@ -14,6 +22,7 @@ zh:
   blacklight:
     application_name: 'Blacklight'
     skip_links:
+      label: '跳过链接'
       main_content: '转到主要内容'
       search_field: '转到搜索'
       first_result: '转到第一个搜索结果'
@@ -138,11 +147,12 @@ zh:
         request_error: "抱歉，我不明白你要找什么。"
         invalid_solr_id: "抱歉，你要找的结果不存在。"
       per_page:
-        label: '%{count}<span class="sr-only"> 每页</span>'
+        label: '%{count}<span class="sr-only visually-hidden"> 每页</span>'
         button_label: '%{count} 每页' # TODO: Remove during major release
         button_label_html: '%{count}<span class="d-none d-sm-inline"> 每页</span>'
         title: '每页显示结果数'
         submit: '更新'
+        aria_label: '结果导航'
       sort:
         label: '按 %{field} 排序' # TODO: Remove during major release
         label_html: '<span class="d-none d-sm-inline">按 %{field} </span>排序'
@@ -180,10 +190,15 @@ zh:
           count: '按数量排序'
           index: '按字母排序'
         count: '%{number}'
-        more_html: '更多 <span class="sr-only">%{field_name}</span> »'
+        more_html: '更多 <span class="sr-only visually-hidden">%{field_name}</span> »'
         selected:
           remove: '[删除]'
         missing: "[未找到]"
+        pivot:
+          show: 打开
+          hide: 关
+        group:
+          toggle: '更多 »'
       group:
         more: '更多 »'
       filters:

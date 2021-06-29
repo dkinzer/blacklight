@@ -3,6 +3,8 @@
 RSpec.describe Blacklight::FacetsHelperBehavior do
   let(:blacklight_config) { Blacklight::Configuration.new }
 
+  around { |test| Deprecation.silence(described_class) { test.call } }
+
   before do
     allow(helper).to receive(:blacklight_config).and_return blacklight_config
   end
@@ -103,6 +105,8 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
   end
 
   describe "facet_by_field_name" do
+    around { |test| Deprecation.silence(Blacklight::Facet) { test.call } }
+
     it "retrieves the facet from the response given a string" do
       facet_config = double(query: nil, field: 'b', key: 'a')
       facet_field = double
@@ -133,7 +137,6 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
       expect(helper).to receive(:render_facet_limit).with(a, {})
       expect(helper).to receive(:render_facet_limit).with(b, {})
       helper.render_facet_partials
-      expect(Deprecation).to have_received(:warn).twice
     end
   end
 
@@ -141,6 +144,8 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
     let(:blacklight_config) do
       Blacklight::Configuration.new do |config|
         config.add_facet_field 'basic_field'
+        config.add_facet_field 'component_field', component: true
+        config.add_facet_field 'non_rendering_component_field', component: true, if: false
         config.add_facet_field 'pivot_facet_field', pivot: %w[a b]
         config.add_facet_field 'my_pivot_facet_field_with_custom_partial', partial: 'custom_facet_partial', pivot: %w[a b]
         config.add_facet_field 'my_facet_field_with_custom_partial', partial: 'custom_facet_partial'
@@ -191,6 +196,17 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
       expect(helper).to receive(:render).with(hash_including(partial: 'custom_facet_partial'))
       helper.render_facet_limit(mock_facet)
     end
+
+    it "lets you override the rendered partial for pivot facets" do
+      mock_facet = double(name: 'component_field')
+      expect(helper).to receive(:render).with(an_instance_of(Blacklight::FacetFieldListComponent))
+      helper.render_facet_limit(mock_facet)
+    end
+
+    it "lets you override the rendered partial for pivot facets" do
+      mock_facet = double(name: 'non_rendering_component_field')
+      expect(helper.render_facet_limit(mock_facet)).to be_blank
+    end
   end
 
   describe "render_facet_limit_list" do
@@ -214,7 +230,13 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
 
     context "when one of the facet items is rendered as nil" do
       # An app may override render_facet_item to filter out some undesired facet items by returning nil.
-      before { allow(helper).to receive(:render_facet_item).and_return('<a class="facet-select">Book</a>'.html_safe, nil) }
+      before do
+        allow(helper.method(:render_facet_item)).to receive(:owner).and_return(self.class)
+        # allow_any_instance_of(Blacklight::FacetItemComponent).to receive(:overridden_helper_methods?).and_return(true)
+        allow(helper).to receive(:render_facet_item).and_return('<a class="facet-select">Book</a>'.html_safe, nil)
+      end
+
+      around { |test| Deprecation.silence(Blacklight::FacetItemComponent) { test.call } }
 
       it "draws a list of elements" do
         expect(subject).to have_selector 'li', count: 1
@@ -246,36 +268,44 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
   end
 
   describe "facet_field_in_params?" do
+    let(:search_state) { double }
+
+    before do
+      allow(helper).to receive_messages(search_state: search_state)
+    end
+
     it "checks if any value is selected for a given facet" do
-      allow(helper).to receive_messages(facet_params: ["x"])
+      allow(search_state).to receive(:has_facet?).with(having_attributes(key: 'some-facet')).and_return(true)
       expect(helper.facet_field_in_params?("some-facet")).to eq true
     end
 
     it "is false if no value for facet is selected" do
-      allow(helper).to receive_messages(facet_params: nil)
+      allow(search_state).to receive(:has_facet?).with(having_attributes(key: 'some-facet')).and_return(false)
       expect(helper.facet_field_in_params?("some-facet")).to eq false
     end
   end
 
   describe "facet_in_params?" do
-    it "checks if a particular value is set in the facet params" do
-      allow(helper).to receive_messages(facet_params: ["x"])
-      expect(helper.facet_in_params?("some-facet", "x")).to eq true
-      expect(helper.facet_in_params?("some-facet", "y")).to eq false
+    let(:search_state) { double }
+
+    before do
+      allow(helper).to receive_messages(search_state: search_state)
+      allow(search_state).to receive(:has_facet?).with(having_attributes(key: 'some-facet'), value: 'x').and_return(true)
+      allow(search_state).to receive(:has_facet?).with(having_attributes(key: 'some-facet'), value: 'y').and_return(false)
     end
 
-    it "is false if no value for facet is selected" do
-      allow(helper).to receive_messages(facet_params: nil)
-      expect(helper.facet_in_params?("some-facet", "x")).to eq false
+    it "checks if a particular value is set in the facet params" do
+      expect(helper.facet_in_params?("some-facet", "x")).to eq true
+      expect(helper.facet_in_params?("some-facet", "y")).to eq false
     end
   end
 
   describe "render_facet_value" do
     let(:item) { double(value: 'A', hits: 10) }
-    let(:search_state) { double(add_facet_params_and_redirect: { controller: 'catalog' }) }
+    let(:search_state) { double(has_facet?: false, add_facet_params_and_redirect: { controller: 'catalog' }) }
 
     before do
-      allow(helper).to receive(:facet_configuration_for_field).with('simple_field').and_return(double(query: nil, date: nil, helper_method: nil, single: false, url_method: nil))
+      allow(helper).to receive(:facet_configuration_for_field).with('simple_field').and_return(Blacklight::Configuration::FacetField.new(key: 'simple_field', query: nil, date: nil, helper_method: nil, single: false, url_method: nil))
       allow(helper).to receive(:facet_display_value).and_return('Z')
       allow(helper).to receive(:search_state).and_return(search_state)
       allow(helper).to receive(:search_action_path) do |*args|
@@ -296,7 +326,7 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
       let(:expected_html) { '<span class="facet-label"><a class="facet-select" href="/blabla">Z</a></span><span class="facet-count">10</span>' }
 
       it "uses that method" do
-        allow(helper).to receive(:facet_configuration_for_field).with('simple_field').and_return(double(query: nil, date: nil, helper_method: nil, single: false, url_method: :test_method))
+        allow(helper).to receive(:facet_configuration_for_field).with('simple_field').and_return(Blacklight::Configuration::FacetField.new(key: 'simple_field', query: nil, date: nil, helper_method: nil, single: false, url_method: :test_method))
         allow(helper).to receive(:test_method).with('simple_field', item).and_return('/blabla')
         result = helper.render_facet_value('simple_field', item)
         expect(result).to be_equivalent_to(expected_html).respecting_element_order
@@ -344,6 +374,26 @@ RSpec.describe Blacklight::FacetsHelperBehavior do
   describe "#facet_field_id" do
     it "is the parameterized version of the facet field" do
       expect(helper.facet_field_id(double(key: 'some field'))).to eq "facet-some-field"
+    end
+  end
+
+  describe '#facet_field_presenter' do
+    let(:facet_config) { Blacklight::Configuration::FacetField.new(key: 'x').normalize! }
+    let(:display_facet) { double }
+
+    it 'wraps the facet data in a presenter' do
+      presenter = helper.facet_field_presenter(facet_config, display_facet)
+      expect(presenter).to be_a_kind_of Blacklight::FacetFieldPresenter
+      expect(presenter.facet_field).to eq facet_config
+      expect(presenter.display_facet).to eq display_facet
+      expect(presenter.view_context).to eq helper
+    end
+
+    it 'uses the facet config to determine the presenter class' do
+      stub_const('SomePresenter', Class.new(Blacklight::FacetFieldPresenter))
+      facet_config.presenter = SomePresenter
+      presenter = helper.facet_field_presenter(facet_config, display_facet)
+      expect(presenter).to be_a_kind_of SomePresenter
     end
   end
 end

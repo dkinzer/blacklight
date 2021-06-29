@@ -7,48 +7,55 @@ RSpec.describe Blacklight::Icon do
     it 'returns a string' do
       expect(subject.svg).to be_an String
     end
+
     it 'returns raw svg' do
       expect(Capybara.string(subject.svg))
         .to have_css 'svg[width="24"]'
     end
-    it 'adds role="image"' do
+
+    it 'adds role="img"' do
       expect(Capybara.string(subject.svg))
-        .to have_css 'svg[role="image"]'
+        .to have_css 'svg[role="img"]'
     end
+
     it 'adds title' do
       expect(Capybara.string(subject.svg))
-        .to have_css 'title[id^="bl-icon-search-"]', text: 'search icon'
+        .to have_css 'title', text: 'Search'
     end
-    it 'adds aria-labelled-by' do
-      expect(Capybara.string(subject.svg))
-        .to have_css 'svg[aria-labelled-by^="bl-icon-search-"]'
-    end
+
     context 'when label is false' do
       subject { described_class.new(:search, classes: 'awesome', aria_hidden: true, label: false) }
 
       it 'does not add title' do
         expect(Capybara.string(subject.svg))
-          .not_to have_css 'title', text: 'search icon'
+          .not_to have_css 'title', text: 'Search'
       end
-      it 'does not add aria-labelled-by' do
+    end
+
+    context ' with a label context' do
+      subject { described_class.new(:search, classes: 'awesome', aria_hidden: true, additional_options: { label_context: 'foo' }) }
+
+      it 'adds title' do
         expect(Capybara.string(subject.svg))
-          .not_to have_css 'svg[aria-labelled-by^="bl-icon-search-"]'
+          .to have_css 'title', text: 'Search'
       end
     end
   end
 
   describe '#options' do
     it 'applies options classes and default class' do
-      expect(subject.options[:class]).to eq 'blacklight-icons awesome'
+      expect(subject.options[:class]).to eq 'blacklight-icons blacklight-icon-search awesome'
     end
+
     it 'applies options aria-hidden=true' do
       expect(subject.options[:'aria-hidden']).to be true
     end
+
     context 'no options provided' do
       subject { described_class.new(:view) }
 
       it 'applies default class with no options' do
-        expect(subject.options[:class]).to eq 'blacklight-icons'
+        expect(subject.options[:class]).to eq 'blacklight-icons blacklight-icon-view'
       end
 
       it 'has no aria-hidden attribute with no options' do

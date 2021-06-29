@@ -1,86 +1,63 @@
 # frozen_string_literal: true
 
 RSpec.describe Blacklight::DocumentPresenter do
-  let(:presenter) { described_class.new }
-  let(:doc) { instance_double(SolrDocument) }
-  let(:view_context) { double('View context', should_render_field?: true) }
+  subject(:presenter) { described_class.new(doc, request_context) }
+
+  let(:doc) { SolrDocument.new('asdf' => 'asdf') }
+  let(:blacklight_config) { Blacklight::Configuration.new }
+  let(:request_context) { double('View context', should_render_field?: true, blacklight_config: blacklight_config) }
+  let(:controller) { double }
+  let(:params) { {} }
+  let(:search_state) { Blacklight::SearchState.new(params, blacklight_config, controller) }
 
   before do
-    allow(presenter).to receive(:document).and_return(doc)
-    allow(presenter).to receive(:view_context).and_return(view_context)
+    allow(request_context).to receive(:search_state).and_return(search_state)
   end
 
   describe '#fields_to_render' do
-    subject { presenter.fields_to_render }
+    subject { presenter.fields_to_render.to_a }
 
-    let(:field_config) { double(field: 'asdf') }
+    let(:field_config) { Blacklight::Configuration::Field.new(field: 'asdf') }
 
     context 'when all of the fields have values' do
       before do
-        allow(presenter).to receive_messages(fields: { 'title' => field_config },
-                                             render_field?: true,
-                                             has_value?: true)
+        allow(presenter).to receive_messages(fields: { 'title' => field_config })
       end
 
-      it { is_expected.to eq('title' => field_config) }
+      it { is_expected.to include(['title', field_config, an_instance_of(Blacklight::FieldPresenter)]) }
     end
   end
 
-  describe '#render_field?' do
-    subject { presenter.send(:render_field?, field_config) }
+  describe '#field_value' do
+    let(:field_presenter) { instance_double(Blacklight::FieldPresenter, render: 'xyz') }
+    let(:field_config) { Blacklight::Configuration::Field.new }
+    let(:options) { { a: 1 } }
 
-    let(:field_config) { double('field config', if: true, unless: false) }
-
-    before do
-      allow(presenter).to receive_messages(document_has_value?: true)
+    it 'calls the field presenter' do
+      allow(Blacklight::FieldPresenter).to receive(:new).with(request_context, doc, field_config, options).and_return(field_presenter)
+      expect(presenter.field_value(field_config, options)).to eq 'xyz'
     end
 
-    it { is_expected.to be true }
+    it 'can be configured to use an alternate presenter' do
+      instance = double(render: 'abc')
+      stub_const('SomePresenter', Class.new)
+      field_config.presenter = SomePresenter
+      allow(SomePresenter).to receive(:new).and_return(instance)
 
-    context 'when the view context says not to render the field' do
-      let(:view_context) { double('View context', should_render_field?: false) }
-
-      before do
-        allow(field_config).to receive_messages(if: false)
-      end
-
-      it { is_expected.to be false }
+      expect(presenter.field_value(field_config, options)).to eq 'abc'
     end
   end
 
-  describe '#has_value?' do
-    subject { presenter.send(:has_value?, field_config) }
-
-    context 'when the document has the field value' do
-      let(:field_config) { double(field: 'asdf') }
-
-      before do
-        allow(doc).to receive(:has?).with('asdf').and_return(true)
-      end
-
-      it { is_expected.to be true }
+  describe '#thumbnail' do
+    it 'returns a thumbnail presenter' do
+      expect(presenter.thumbnail).to be_a_kind_of(Blacklight::ThumbnailPresenter)
     end
 
-    context 'when the document has a highlight field value' do
-      let(:field_config) { double(field: 'asdf', highlight: true) }
+    it 'use the configured thumbnail presenter' do
+      custom_presenter_class = Class.new(Blacklight::ThumbnailPresenter)
+      blacklight_config.index.thumbnail_presenter = custom_presenter_class
 
-      before do
-        allow(doc).to receive(:has_highlight_field?).with('asdf').and_return(true)
-        allow(doc).to receive(:has?).with('asdf').and_return(true)
-      end
-
-      it { is_expected.to be true }
-    end
-
-    context 'when the field is a model accessor' do
-      let(:field_config) { double(field: 'asdf', highlight: true, accessor: true) }
-
-      before do
-        allow(doc).to receive(:has_highlight_field?).with('asdf').and_return(true)
-        allow(doc).to receive(:has?).with('asdf').and_return(true)
-      end
-
-      it { is_expected.to be true }
+      expect(presenter.thumbnail).to be_a_kind_of custom_presenter_class
     end
   end
 end

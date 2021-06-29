@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 module Blacklight::RenderPartialsHelperBehavior
+  extend Deprecation
+
   ##
   # Render the document index view
   #
@@ -16,6 +18,7 @@ module Blacklight::RenderPartialsHelperBehavior
   def render_grouped_document_index
     render 'catalog/group'
   end
+  deprecation_deprecate render_grouped_document_index: 'Removed without replacement'
 
   ##
   # Return the list of partials for a given solr document
@@ -54,7 +57,7 @@ module Blacklight::RenderPartialsHelperBehavior
   # @param [String] base_name base name for the partial
   # @param [Hash] locals local variables to pass through to the partials
   def render_document_partial(doc, base_name, locals = {})
-    format = document_partial_name(doc, base_name)
+    format = Deprecation.silence(Blacklight::RenderPartialsHelperBehavior) { document_partial_name(doc, base_name) }
 
     view_type = document_index_view_type
     template = cached_view ['show', view_type, base_name, format].join('_') do
@@ -81,12 +84,16 @@ module Blacklight::RenderPartialsHelperBehavior
   # @param [Hash] locals to pass to the render call
   # @return [String]
   def render_document_index_with_view view, documents, locals = {}
+    view_config = blacklight_config&.view_config(view)
+
+    return render partial: view_config.template, locals: locals.merge(documents: documents, view_config: view_config) if view_config&.template
+
     template = cached_view ['index', view].join('_') do
       find_document_index_template_with_view(view, locals)
     end
 
     if template
-      template.render(self, locals.merge(documents: documents))
+      template.render(self, locals.merge(documents: documents, view_config: view_config))
     else
       ''
     end
@@ -111,22 +118,16 @@ module Blacklight::RenderPartialsHelperBehavior
   ##
   # Return a normalized partial name for rendering a single document
   #
+  # @private
   # @param [SolrDocument] document
   # @param [Symbol] base_name base name for the partial
   # @return [String]
   def document_partial_name(document, base_name = nil)
-    view_config = blacklight_config.view_config(:show)
-
-    display_type = if base_name && view_config.key?(:"#{base_name}_display_type_field")
-                     document[view_config[:"#{base_name}_display_type_field"]]
-                   end
-
-    display_type ||= document[view_config.display_type_field]
-
-    display_type ||= 'default'
+    display_type = document_presenter(document).display_type(base_name, default: 'default')
 
     type_field_to_partial_name(document, display_type)
   end
+  deprecation_deprecate document_partial_name: 'Moving to a private method'
 
   private
 
@@ -135,7 +136,7 @@ module Blacklight::RenderPartialsHelperBehavior
   # this method can be overridden in order to transform the value
   #   (e.g. 'PdfBook' => 'pdf_book')
   #
-  # @param [SolrDocument] document
+  # @param [SolrDocument] _document
   # @param [String, Array] display_type a value suggestive of a partial
   # @return [String] the name of the partial to render
   # @example
@@ -176,7 +177,7 @@ module Blacklight::RenderPartialsHelperBehavior
   def find_document_show_template_with_view view_type, base_name, format, locals
     document_partial_path_templates.each do |str|
       partial = format(str, action_name: base_name, format: format, index_view_type: view_type)
-      logger.debug "Looking for document partial #{partial}"
+      logger&.debug "Looking for document partial #{partial}"
       template = lookup_context.find_all(partial, lookup_context.prefixes + [""], true, locals.keys + [:document], {}).first
       return template if template
     end
@@ -186,7 +187,7 @@ module Blacklight::RenderPartialsHelperBehavior
   def find_document_index_template_with_view view_type, locals
     document_index_path_templates.each do |str|
       partial = format(str, index_view_type: view_type)
-      logger.debug "Looking for document index partial #{partial}"
+      logger&.debug "Looking for document index partial #{partial}"
       template = lookup_context.find_all(partial, lookup_context.prefixes + [""], true, locals.keys + [:documents], {}).first
       return template if template
     end

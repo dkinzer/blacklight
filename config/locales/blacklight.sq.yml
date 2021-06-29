@@ -6,13 +6,23 @@ sq:
       previous: '&laquo; Mbrapa'
       next: 'Tjetra &raquo;'
       truncate: '…'
+      aria:
+        container_label: lidhjet e pagination
+        current_page: Faqja aktuale, Faqja %{page}
+        go_to_page: Shkoni te faqja %{page}
+        go_to_previous_page: Shko te faqja e mëparshme
+        go_to_next_page: Shko te faqja tjetër
+        go_to_first_page: Shko tek faqja e parë
+        go_to_last_page: Shko tek faqja e fundit
 
     pagination_compact:
       previous: '&laquo; Mbrapa'
       next: 'Tjetra &raquo;'
 
   blacklight:
+    application_name: 'Blacklight'
     skip_links:
+      label: 'lidhjet e kaloni'
       main_content: 'Shkoni tek përmbajtja kryesore'
       search_field: 'Shkoni në kërkim'
       first_result: 'Shkoni te rezultati i parë i kërkimit'
@@ -137,11 +147,12 @@ sq:
         request_error: "Na vjen keq, unë nuk e kuptoj kërkimin tuaj."
         invalid_solr_id: "Na vjen keq, ju keni kërkuar një të dhënë që nuk ekziston."
       per_page:
-        label: '%{count}<span class="sr-only"> për faqe</span>'
+        label: '%{count}<span class="sr-only visually-hidden"> për faqe</span>'
         button_label: '%{count} për faqe' # TODO: Remove during major release
         button_label_html: '%{count}<span class="d-none d-sm-inline"> për faqe</span>'
         title: 'Numri i rezultateve që do të shfaqen për faqe'
         submit: 'Përditëso'
+        aria_label: 'Rezultatet e lundrimit'
       sort:
         label: 'Klasifikoj sipas %{field}' # TODO: Remove during major release
         label_html: 'Klasifikoj<span class="d-none d-sm-inline"> sipas %{field}</span>'
@@ -179,10 +190,15 @@ sq:
           count: 'Renditja numerike'
           index: 'A-Z Renditja'
         count: '%{number}'
-        more_html: 'Më shumë <span class="sr-only">%{field_name}</span> »'
+        more_html: 'Më shumë <span class="sr-only visually-hidden">%{field_name}</span> »'
         selected:
           remove: '[fshije]'
         missing: "[Mungon]"
+        pivot:
+          show: Hape
+          hide: "Mbylle"
+        group:
+          toggle: 'më shumë »'
       group:
         more: 'më shumë »'
       filters:

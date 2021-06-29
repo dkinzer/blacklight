@@ -3,7 +3,7 @@ de:
     pagination:
       first: '&laquo; Erste'
       last: 'Letzte &raquo;'
-      previous: '&laquo; Voherige'
+      previous: '&laquo; Vorherige'
       next: 'Nächste &raquo;'
       truncate: '…'
       aria:
@@ -16,12 +16,13 @@ de:
         go_to_previous_page: Zurück zur letzten Seite
 
     pagination_compact:
-      previous: '&laquo; Voherige'
+      previous: '&laquo; Vorherige'
       next: 'Nächste &raquo;'
 
   blacklight:
     application_name: 'Blacklight'
     skip_links:
+      label: 'Links überspringen'
       main_content: 'Zum Hauptinhalt gehen'
       search_field: 'Gehen Sie zur Suchleiste'
       first_result: 'Gehe zum ersten Suchergebnis'
@@ -146,11 +147,12 @@ de:
         request_error: "Entschuldigung, ich habe Ihre Suche nicht verstanden."
         invalid_solr_id: "Entschuldigung, Sie haben einen nicht vorhandenen Datensatz angefordert."
       per_page:
-        label: '%{count}<span class="sr-only"> pro Seite</span>'
+        label: '%{count}<span class="sr-only visually-hidden"> pro Seite</span>'
         button_label: '%{count} pro Seite' # TODO: Remove during major release
         button_label_html: '%{count}<span class="d-none d-sm-inline"> pro Seite</span>'
         title: 'Anzahl der Ergebnisse, die pro Seite angezeigt werden'
         submit: 'Aktualisieren'
+        aria_label: 'Ergebnisnavigation'
       sort:
         label: 'Ordnen nach %{field}' # TODO: Remove during major release
         label_html: 'Ordnen<span class="d-none d-sm-inline"> nach %{field}</span>'
@@ -167,7 +169,7 @@ de:
       pagination:
         title: 'Ergebnisse Navigation'
       pagination_info:
-        no_items_found: 'Kein %{entry_name} gefunden'
+        no_items_found: 'Keine %{entry_name} gefunden'
         single_item_found: '<strong>1</strong> %{entry_name} gefunden'
         pages:
           one: '<strong>%{start_num}</strong> - <strong>%{end_num}</strong> von <strong>%{total_num}</strong>'
@@ -188,10 +190,15 @@ de:
           count: 'Numerisch ordnen'
           index: 'A-Z Ordnen'
         count: '%{number}'
-        more_html: 'mehr <span class="sr-only">%{field_name}</span> »'
+        more_html: 'mehr <span class="sr-only visually-hidden">%{field_name}</span> »'
         selected:
           remove: '[entfernen]'
         missing: [fehlt]
+        pivot:
+          show: Öffnen
+          hide: Schließen
+        group:
+          toggle: 'mehr »'
       group:
         more: 'mehr »'
       filters:
@@ -223,7 +230,9 @@ de:
         list: "Liste"
 
     entry_name:
-      default: 'Eintrag'
+      default:
+        one: Eintrag
+        other: Enträge
       grouped:
         default: 'gruppiertes Ergebnis'
 

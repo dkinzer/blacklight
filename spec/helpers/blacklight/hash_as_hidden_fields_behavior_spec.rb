@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe Blacklight::HashAsHiddenFieldsHelperBehavior do
+  around { |test| Deprecation.silence(described_class) { test.call } }
+
   let(:params) do
     { q: "query",
       search_field: "search_field",
@@ -12,6 +14,7 @@ RSpec.describe Blacklight::HashAsHiddenFieldsHelperBehavior do
   let(:generated) { helper.render_hash_as_hidden_fields(params) }
 
   it "converts a hash with nested complex data to Rails-style hidden form fields" do
+    allow(Deprecation).to receive(:warn)
     expect(generated).to have_selector("input[type='hidden'][name='q'][value='query']", visible: false)
     expect(generated).to have_selector("input[type='hidden'][name='per_page'][value='10']", visible: false)
     expect(generated).to have_selector("input[type='hidden'][name='page'][value='5']", visible: false)

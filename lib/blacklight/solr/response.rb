@@ -9,6 +9,7 @@ class Blacklight::Solr::Response < ActiveSupport::HashWithIndifferentAccess
     autoload :MoreLikeThis
     autoload :GroupResponse
     autoload :Group
+    autoload :Params
   end
 
   include PaginationMethods
@@ -16,9 +17,11 @@ class Blacklight::Solr::Response < ActiveSupport::HashWithIndifferentAccess
   include Facets
   include Response
   include MoreLikeThis
+  include Params
 
   attr_reader :request_params
   attr_accessor :blacklight_config, :options
+
   delegate :document_factory, to: :blacklight_config
 
   def initialize(data, request_params, options = {})
@@ -30,22 +33,6 @@ class Blacklight::Solr::Response < ActiveSupport::HashWithIndifferentAccess
 
   def header
     self['responseHeader'] || {}
-  end
-
-  def params
-    header['params'] || request_params
-  end
-
-  def start
-    params[:start].to_i
-  end
-
-  def rows
-    params[:rows].to_i
-  end
-
-  def sort
-    params[:sort]
   end
 
   def documents
@@ -92,7 +79,7 @@ class Blacklight::Solr::Response < ActiveSupport::HashWithIndifferentAccess
       value.each { |v| force_to_utf8(v) }
     when String
       if value.encoding != Encoding::UTF_8
-        Blacklight.logger.warn "Found a non utf-8 value in Blacklight::Solr::Response. \"#{value}\" Encoding is #{value.encoding}"
+        Blacklight.logger&.warn "Found a non utf-8 value in Blacklight::Solr::Response. \"#{value}\" Encoding is #{value.encoding}"
         value.dup.force_encoding('UTF-8')
       else
         value

@@ -1,7 +1,7 @@
 {
   "name": "blacklight-frontend",
-  "version": "7.2.0",
-  "description": "[![Build Status](https://travis-ci.org/projectblacklight/blacklight.png?branch=master)](https://travis-ci.org/projectblacklight/blacklight) [![Gem Version](https://badge.fury.io/rb/blacklight.png)](http://badge.fury.io/rb/blacklight) [![Coverage Status](https://coveralls.io/repos/github/projectblacklight/blacklight/badge.svg?branch=master)](https://coveralls.io/github/projectblacklight/blacklight?branch=master)",
+  "version": "7.10.0",
+  "description": "[![Build Status](https://travis-ci.com/projectblacklight/blacklight.png?branch=master)](https://travis-ci.com/projectblacklight/blacklight) [![Gem Version](https://badge.fury.io/rb/blacklight.png)](http://badge.fury.io/rb/blacklight) [![Coverage Status](https://coveralls.io/repos/github/projectblacklight/blacklight/badge.svg?branch=master)](https://coveralls.io/github/projectblacklight/blacklight?branch=master)",
   "main": "app/assets/javascripts/blacklight",
   "scripts": {
     "js-compile-bundle": "shx cat app/javascript/blacklight/core.js app/javascript/blacklight/autocomplete.js app/javascript/blacklight/bookmark_toggle.js app/javascript/blacklight/button_focus.js app/javascript/blacklight/checkbox_submit.js app/javascript/blacklight/facet_load.js app/javascript/blacklight/modal.js app/javascript/blacklight/search_context.js | shx sed \"s/^(import|export).*//\" | babel --filename app/javascript/blacklight/blacklight.js > app/assets/javascripts/blacklight/blacklight.js"
@@ -10,6 +10,10 @@
     "type": "git",
     "url": "git+https://github.com/projectblacklight/blacklight.git"
   },
+  "files": [
+    "app/assets",
+    "app/javascript"
+  ],
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
@@ -24,7 +28,7 @@
   "dependencies": {
     "bloodhound-js": "^1.2.3",
     "bootstrap": "^4.3.1",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.1",
     "typeahead.js": "^0.11.1"
   }
 }

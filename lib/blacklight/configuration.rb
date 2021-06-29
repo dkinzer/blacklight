@@ -65,10 +65,13 @@ module Blacklight
           index: ViewConfig::Index.new(
             # document presenter class used by helpers and views
             document_presenter_class: nil,
+            # component class used to render a document; defaults to Blacklight::DocumentComponent,
+            #   but can be set explicitly to avoid any legacy behavior
+            document_component: nil,
             # solr field to use to render a document title
             title_field: nil,
             # solr field to use to render format-specific partials
-            display_type_field: 'format',
+            display_type_field: nil,
             # partials to render for each document(see #render_document_partials)
             partials: [:index_header, :thumbnail, :index],
             document_actions: NestedOpenStructWithHashAccess.new(ToolConfig),
@@ -82,7 +85,8 @@ module Blacklight
           show: ViewConfig::Show.new(
             # document presenter class used by helpers and views
             document_presenter_class: nil,
-            display_type_field: 'format',
+            document_component: nil,
+            display_type_field: nil,
             # Default route parameters for 'show' requests.
             # Set this to a hash with additional arguments to merge into the route,
             # or set `controller: :current` to route to the current controller.
@@ -94,12 +98,19 @@ module Blacklight
           # SMS and Email configurations.
           sms: ViewConfig.new,
           email: ViewConfig.new,
+          action_mapping: NestedOpenStructWithHashAccess.new(
+            ViewConfig,
+            default: { top_level_config: :index },
+            show: { top_level_config: :show },
+            citation: { parent_config: :show }
+          ),
           # Configurations for specific types of index views
           view: NestedOpenStructWithHashAccess.new(ViewConfig,
                                                    list: {},
                                                    atom: {
                                                      if: false, # by default, atom should not show up as an alternative view
-                                                     partials: [:document]
+                                                     partials: [:document],
+                                                     summary_partials: [:index]
                                                    },
                                                    rss: {
                                                      if: false, # by default, rss should not show up as an alternative view
@@ -130,7 +141,8 @@ module Blacklight
           crawler_detector: nil,
           autocomplete_suggester: 'mySuggester',
           raw_endpoint: OpenStructWithHashAccess.new(enabled: false),
-          track_search_session: true
+          track_search_session: true,
+          advanced_search: OpenStruct.new(enabled: false)
           }
         end
         # rubocop:enable Metrics/MethodLength
@@ -167,6 +179,8 @@ module Blacklight
     def initialize(hash = {})
       super(self.class.default_values.deep_dup.merge(hash))
       yield(self) if block_given?
+
+      @view_config ||= {}
     end
 
     def document_model
@@ -260,6 +274,11 @@ module Blacklight
       facet_fields.select { |_facet, opts| group == opts[:group] }.values.map(&:field)
     end
 
+    # @return [Array<String>] a list of facet groups
+    def facet_group_names
+      facet_fields.map { |_facet, opts| opts[:group] }.uniq
+    end
+
     # Add any configured facet fields to the default solr parameters hash
     # @overload add_facet_fields_to_solr_request!
     #    add all facet fields to the solr request
@@ -291,15 +310,10 @@ module Blacklight
     # Provide a 'deep copy' of Blacklight::Configuration that can be modified without effecting
     # the original Blacklight::Configuration instance.
     #
-    # Rails 4.x provides `#deep_dup`, but it aggressively `#dup`'s class names
-    # too. These model names should not be `#dup`'ed or we might break ActiveModel::Naming.
+    # Note: Rails provides `#deep_dup`, but it aggressively `#dup`'s class names too, turning them
+    # into anonymous class instances.
     def deep_copy
-      deep_dup.tap do |copy|
-        %w(repository_class response_model document_model document_presenter_class search_builder_class facet_paginator_class).each do |klass|
-          # Don't copy if nil, so as not to prematurely autoload default classes
-          copy.send("#{klass}=", send(klass)) unless fetch(klass.to_sym, nil).nil?
-        end
-      end
+      deep_transform_values_in_object(self, &method(:_deep_copy))
     end
 
     # builds a copy for the provided controller class
@@ -310,17 +324,38 @@ module Blacklight
     end
     alias_method :inheritable_copy, :build
 
-    # Get a view configuration for the given view type
-    # including default values from the index configuration
+    # Get a view configuration for the given view type + action. The effective
+    # view configuration is inherited from:
+    # - the configuration from blacklight_config.view with the key `view_type`
+    # - the configuration from blacklight_config.action_mapping with the key `action_name`
+    # - any parent config for the action map result above
+    # - the action_mapping default configuration
+    # - the top-level index/show view configuration
+    #
     # @param [Symbol,#to_sym] view_type
     # @return [Blacklight::Configuration::ViewConfig]
-    def view_config(view_type)
-      view_type = view_type.to_sym unless view_type.is_a? Symbol
-      index.merge(view_type == :show ? show : view.fetch(view_type, {}))
+    def view_config(view_type = nil, action_name: :index)
+      view_type &&= view_type.to_sym
+      action_name &&= action_name.to_sym
+      action_name ||= :index
+
+      if view_type == :show
+        action_name = view_type
+        view_type = nil
+      end
+
+      @view_config[[view_type, action_name]] ||= begin
+        if view_type.nil?
+          action_config(action_name)
+        else
+          base_config = action_config(action_name)
+          base_config.merge(view.fetch(view_type, {}))
+        end
+      end
     end
 
     # YARD will include inline disabling as docs, cannot do multiline inside @!macro.  AND this must be separate from doc block.
-    # rubocop:disable Metrics/LineLength
+    # rubocop:disable Layout/LineLength
 
     # Add a partial to the tools when rendering a document.
     # @!macro partial_if_unless
@@ -333,7 +368,7 @@ module Blacklight
       add_action(show.document_actions, name, opts)
       klass && ActionBuilder.new(klass, name, opts).build
     end
-    # rubocop:enable Metrics/LineLength
+    # rubocop:enable Layout/LineLength
 
     # Add a tool for the search result list itself
     # @!macro partial_if_unless
@@ -366,26 +401,105 @@ module Blacklight
     ##
     # Return a list of fields for the index display that should be used for the
     # provided document.  This respects any configuration made using for_display_type
-    def index_fields_for(document)
-      display_type = document.first(index.display_type_field)
-      for_display_type(display_type).index_fields.merge(index_fields)
+    def index_fields_for(document_or_display_types)
+      display_types = if document_or_display_types.is_a? Blacklight::Document
+                        Deprecation.warn self, "Calling index_fields_for with a #{document_or_display_types.class} is deprecated and will be removed in Blacklight 8. Pass the display type instead."
+                        document_or_display_types[index.display_type_field || 'format']
+                      else
+                        document_or_display_types
+                      end
+
+      fields = {}.with_indifferent_access
+
+      Array.wrap(display_types).each do |display_type|
+        fields = fields.merge(for_display_type(display_type).index_fields)
+      end
+
+      fields.merge(index_fields)
     end
 
     ##
     # Return a list of fields for the show page that should be used for the
     # provided document.  This respects any configuration made using for_display_type
-    def show_fields_for(document)
-      display_type = document.first(show.display_type_field)
-      for_display_type(display_type).show_fields.merge(show_fields)
+    def show_fields_for(document_or_display_types)
+      display_types = if document_or_display_types.is_a? Blacklight::Document
+                        Deprecation.warn self, "Calling show_fields_for with a #{document_or_display_types.class} is deprecated and will be removed in Blacklight 8. Pass the display type instead."
+                        document_or_display_types[show.display_type_field || 'format']
+                      else
+                        document_or_display_types
+                      end
+
+      fields = {}.with_indifferent_access
+
+      Array.wrap(display_types).each do |display_type|
+        fields = fields.merge(for_display_type(display_type).show_fields)
+      end
+
+      fields.merge(show_fields)
+    end
+
+    def freeze
+      each { |_k, v| v.is_a?(OpenStruct) && v.freeze }
+      super
     end
 
     private
 
     def add_action(config_hash, name, opts)
       config = Blacklight::Configuration::ToolConfig.new opts
-      config.name = name
+      config.name ||= name
+      config.key = name
       yield(config) if block_given?
       config_hash[name] = config
+    end
+
+    # Provide custom duplication for certain types of configuration (intended for use in e.g. deep_transform_values)
+    def _deep_copy(value)
+      case value
+      when Module then value
+      when NestedOpenStructWithHashAccess then value.class.new(value.nested_class, deep_transform_values_in_object(value.to_h, &method(:_deep_copy)))
+      when OpenStruct then value.class.new(deep_transform_values_in_object(value.to_h, &method(:_deep_copy)))
+      else
+        value.dup
+      end
+    end
+
+    # This is a little shim to support Rails 6 (which has Hash#deep_transform_values) and
+    # earlier versions (which use our backport). Once we drop support for Rails 6, this
+    # can go away.
+    def deep_transform_values_in_object(object, &block)
+      return object.deep_transform_values(&block) if object.respond_to?(:deep_transform_values)
+
+      _deep_transform_values_in_object(object, &block)
+    end
+
+    # Ported from Rails 6
+    def _deep_transform_values_in_object(object, &block)
+      case object
+      when Hash
+        object.transform_values { |value| _deep_transform_values_in_object(value, &block) }
+      when Array
+        object.map { |e| _deep_transform_values_in_object(e, &block) }
+      else
+        yield(object)
+      end
+    end
+
+    def action_config(action, default: :index)
+      action_config = action_mapping[action]
+      action_config ||= action_mapping[:default]
+
+      if action_config.parent_config && action_config.parent_config != :default
+        parent_config = action_mapping[action_config.parent_config]
+        raise "View configuration error: the parent configuration of #{action_config.key}, #{parent_config.key}, must not specific its own parent configuration" if parent_config.parent_config
+
+        action_config = action_config.reverse_merge(parent_config)
+      end
+      action_config = action_config.reverse_merge(action_mapping[:default]) if action_config != action_mapping[:default]
+
+      action_config = action_config.reverse_merge(self[action_config.top_level_config]) if action_config.top_level_config
+      action_config = action_config.reverse_merge(show) if default == :show && action_config.top_level_config != :show
+      action_config.reverse_merge(index)
     end
   end
 end

@@ -6,6 +6,7 @@ RSpec.describe "catalog/_facet_group" do
   before do
     allow(view).to receive_messages(blacklight_config: blacklight_config)
     allow(view).to receive(:search_action_path).and_return('/catalog')
+    allow(view).to receive(:search_facet_path).and_return('/catalog')
   end
 
   context "without any facet fields" do
@@ -69,6 +70,7 @@ RSpec.describe "catalog/_facet_group" do
         render
         expect(rendered).to have_selector('.facet-field-heading')
       end
+
       it "lists values" do
         render
         # The .facet-content class is used by blacklight_range_limit js, and

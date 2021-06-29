@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 RSpec.describe "Search Page" do
+  it 'declares the page language in the html lang attribute' do
+    visit root_path
+    expect(page).to have_selector('html[lang=en]')
+  end
+
   it "shows welcome" do
     visit root_path
     expect(page).to have_selector("input#q")
@@ -109,10 +114,5 @@ RSpec.describe "Search Page" do
 
     expect(page).to have_content "Welcome!"
     expect(page).not_to have_selector "#q[value='history']"
-  end
-
-  it "handles searches with invalid facet parameters" do
-    visit root_path f: { missing_s: [1] }
-    expect(page).to have_content "No results found for your search"
   end
 end

@@ -55,9 +55,18 @@ RSpec.describe "Blacklight::Configuration", api: true do
     it "has the global blacklight configuration" do
       expect(config.connection_config).to eq Blacklight.connection_config
     end
+
     it "is overridable with custom configuration" do
       config.connection_config = custom_config
       expect(config.connection_config).to eq custom_config
+    end
+  end
+
+  describe 'config.index.document_actions' do
+    it 'allows you to use the << operator' do
+      config.index.document_actions << :blah
+      expect(config.index.document_actions.blah).to have_attributes key: :blah
+      expect(config.index.document_actions.blah.name).to eq :blah
     end
   end
 
@@ -87,16 +96,38 @@ RSpec.describe "Blacklight::Configuration", api: true do
     let(:image) { SolrDocument.new(format: 'Image') }
     let(:sound) { SolrDocument.new(format: 'Sound') }
 
+    context 'with deprecated behavior' do
+      before do
+        allow(Deprecation).to receive(:warn)
+      end
+
+      it 'accepts documents as an argument to index_fields_for' do
+        config.for_display_type "Image" do |c|
+          c.add_index_field :dimensions
+        end
+        config.add_index_field :title
+        expect(config.index_fields_for(image)).to have_key 'dimensions'
+      end
+
+      it 'accepts documents as an argument to show_fields_for' do
+        config.for_display_type "Image" do |c|
+          c.add_show_field :dimensions
+        end
+        config.add_show_field :title
+        expect(config.show_fields_for(image)).to have_key 'dimensions'
+      end
+    end
+
     it "adds index fields just for a certain type" do
       config.for_display_type "Image" do |c|
         c.add_index_field :dimensions
       end
       config.add_index_field :title
 
-      expect(config.index_fields_for(image)).to have_key 'dimensions'
-      expect(config.index_fields_for(image)).to have_key 'title'
-      expect(config.index_fields_for(sound)).not_to have_key 'dimensions'
-      expect(config.index_fields_for(image)).to have_key 'title'
+      expect(config.index_fields_for(['Image'])).to have_key 'dimensions'
+      expect(config.index_fields_for(['Image'])).to have_key 'title'
+      expect(config.index_fields_for(['Sound'])).not_to have_key 'dimensions'
+      expect(config.index_fields_for(['Image'])).to have_key 'title'
       expect(config.index_fields).not_to have_key 'dimensions'
     end
 
@@ -106,10 +137,10 @@ RSpec.describe "Blacklight::Configuration", api: true do
       end
       config.add_show_field :title
 
-      expect(config.show_fields_for(image)).to have_key 'dimensions'
-      expect(config.show_fields_for(image)).to have_key 'title'
-      expect(config.show_fields_for(sound)).not_to have_key 'dimensions'
-      expect(config.show_fields_for(image)).to have_key 'title'
+      expect(config.show_fields_for(['Image'])).to have_key 'dimensions'
+      expect(config.show_fields_for(['Image'])).to have_key 'title'
+      expect(config.show_fields_for(['Sound'])).not_to have_key 'dimensions'
+      expect(config.show_fields_for(['Image'])).to have_key 'title'
       expect(config.show_fields).not_to have_key 'dimensions'
     end
 
@@ -121,8 +152,8 @@ RSpec.describe "Blacklight::Configuration", api: true do
         c.add_show_field :photographer
       end
 
-      expect(config.show_fields_for(image)).to have_key 'dimensions'
-      expect(config.show_fields_for(image)).to have_key 'photographer'
+      expect(config.show_fields_for(['Image'])).to have_key 'dimensions'
+      expect(config.show_fields_for(['Image'])).to have_key 'photographer'
     end
   end
 
@@ -167,14 +198,18 @@ RSpec.describe "Blacklight::Configuration", api: true do
     it "provides cloned copies of mutable data structures" do
       config.a = { value: 1 }
       config.b = [1, 2, 3]
+      config.c = Blacklight::Configuration::Field.new(key: 'c', value: %w[a b])
 
       config_copy.a[:value] = 2
       config_copy.b << 5
+      config_copy.c.value << 'c'
 
       expect(config.a[:value]).to eq 1
       expect(config_copy.a[:value]).to eq 2
       expect(config.b).to match_array [1, 2, 3]
       expect(config_copy.b).to match_array [1, 2, 3, 5]
+      expect(config.c.value).to match_array %w[a b]
+      expect(config_copy.c.value).to match_array %w[a b c]
     end
   end
 
@@ -314,12 +349,14 @@ RSpec.describe "Blacklight::Configuration", api: true do
       expect(config.index_fields["title_tsim"]).not_to be_nil
       expect(config.index_fields["title_tsim"].label).to eq "Title"
     end
+
     it "takes IndexField param" do
       config.add_index_field("title_tsim", Blacklight::Configuration::IndexField.new(field: "title_display", label: "Title"))
 
       expect(config.index_fields["title_tsim"]).not_to be_nil
       expect(config.index_fields["title_tsim"].label).to eq "Title"
     end
+
     it "takes block form" do
       config.add_index_field("title_tsim") do |field|
         field.label = "Title"
@@ -362,12 +399,14 @@ RSpec.describe "Blacklight::Configuration", api: true do
       expect(config.show_fields["title_tsim"]).not_to be_nil
       expect(config.show_fields["title_tsim"].label).to eq "Title"
     end
+
     it "takes ShowField argument" do
       config.add_show_field("title_tsim", Blacklight::Configuration::ShowField.new(field: "title_display", label: "Title"))
 
       expect(config.show_fields["title_tsim"]).not_to be_nil
       expect(config.show_fields["title_tsim"].label).to eq "Title"
     end
+
     it "takes block form" do
       config.add_show_field("title_tsim") do |f|
         f.label = "Title"
@@ -606,6 +645,80 @@ RSpec.describe "Blacklight::Configuration", api: true do
   describe "#facet_paginator_class" do
     it "defaults to Blacklight::Solr::FacetPaginator" do
       expect(config.facet_paginator_class).to eq Blacklight::Solr::FacetPaginator
+    end
+  end
+
+  describe '#view_config' do
+    before do
+      config.index.title_field = 'title_tsim'
+    end
+
+    context 'with a view that does not exist' do
+      it 'defaults to the index config' do
+        expect(config.view_config('this-doesnt-exist')).to have_attributes config.index.to_h
+      end
+    end
+
+    context 'with the :show view' do
+      it 'includes the show config' do
+        expect(config.view_config(:show)).to have_attributes config.show.to_h
+      end
+
+      it 'uses the show document presenter' do
+        expect(config.view_config(:show)).to have_attributes document_presenter_class: Blacklight::ShowPresenter
+      end
+
+      it 'includes index config defaults' do
+        expect(config.view_config(:show)).to have_attributes title_field: 'title_tsim'
+      end
+    end
+
+    context 'with just an action name' do
+      it 'includes the action config' do
+        expect(config.view_config(action_name: :show)).to have_attributes config.show.to_h
+      end
+
+      it 'includes the default action mapping configuration' do
+        config.action_mapping.default.whatever = :some_value
+
+        expect(config.view_config(action_name: :show)).to have_attributes whatever: :some_value
+      end
+
+      it 'includes the action-specific mappings' do
+        config.action_mapping.foo.document_presenter_class = Blacklight::DocumentPresenter
+
+        expect(config.view_config(action_name: :foo)).to have_attributes config.action_mapping.foo.to_h
+      end
+
+      it 'allows the action mapping to specific a parent configuration with some more defaults' do
+        config.action_mapping.foo.parent_config = :bar
+        config.action_mapping.bar.whatever = :bar_value
+
+        expect(config.view_config(action_name: :foo)).to have_attributes whatever: :bar_value
+      end
+
+      context 'with the :citation action' do
+        it 'also includes the show config' do
+          expect(config.view_config(action_name: :citation)).to have_attributes config.show.to_h
+        end
+      end
+    end
+
+    context 'with a view' do
+      it 'includes the configuration-level view parameters' do
+        expect(config.view_config(:atom)).to have_attributes config.index.to_h.except(:partials)
+        expect(config.view_config(:atom)).to have_attributes partials: [:document]
+      end
+    end
+  end
+
+  describe '#freeze' do
+    it 'freezes the configuration' do
+      config.freeze
+
+      expect(config.a).to be_nil
+      expect { config.a = '123' }.to raise_error(FrozenError)
+      expect { config.view.a = '123' }.to raise_error(FrozenError)
     end
   end
 end

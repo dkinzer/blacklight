@@ -1,7 +1,5 @@
 # Blacklight
 
-[![Build Status](https://travis-ci.org/projectblacklight/blacklight.png?branch=master)](https://travis-ci.org/projectblacklight/blacklight) [![Gem Version](https://badge.fury.io/rb/blacklight.png)](http://badge.fury.io/rb/blacklight) [![Test Coverage](https://api.codeclimate.com/v1/badges/83fd270492c136594e59/test_coverage)](https://codeclimate.com/github/projectblacklight/blacklight/test_coverage)
-
 Blacklight is an open source Solr user interface discovery platform.
 You can use Blacklight to enable searching and browsing of your collections.
 Blacklight uses the [Apache Solr](http://lucene.apache.org/solr) search engine
@@ -29,6 +27,7 @@ rails generate blacklight:install
 * [Project Homepage](http://projectblacklight.org)
 * [Developer Documentation](https://github.com/projectblacklight/blacklight/wiki)
 * [Quickstart Guide](https://github.com/projectblacklight/blacklight/wiki/Quickstart)
+* [Testing and Developing Blacklight](https://github.com/projectblacklight/blacklight/wiki/Testing-and-Developing-Blacklight)
 * [Issue Tracker](https://github.com/projectblacklight/blacklight/issues)
 * [Support](https://github.com/projectblacklight/blacklight/wiki/Support)
 
@@ -37,6 +36,10 @@ rails generate blacklight:install
 * Ruby 2.2+
 * Bundler
 * Rails 5.1+
+
+## Contributing Code
+
+Code contributions are always welcome, instructions for contributing can be found at [CONTRIBUTING.md](https://github.com/projectblacklight/blacklight/blob/master/CONTRIBUTING.md).
 
 ## Configuring Apache Solr
 You'll also want some information about how Blacklight expects [Apache Solr](http://lucene.apache.org/solr ) to run, which you can find in [README_SOLR](https://github.com/projectblacklight/blacklight/wiki/README_SOLR)

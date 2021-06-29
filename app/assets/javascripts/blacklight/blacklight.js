@@ -99,6 +99,7 @@ Blacklight.onLoad(function () {
 Blacklight.onLoad(function () {
   // Button clicks should change focus. As of 10/3/19, Firefox for Mac and
   // Safari both do not set focus to a button on button click.
+  // See https://zellwk.com/blog/inconsistent-button-behavior/ for background information
   document.querySelectorAll('button.collapse-toggle').forEach(button => {
     button.addEventListener('click', () => {
       event.target.focus();
@@ -297,7 +298,7 @@ Blacklight.onLoad(function () {
 
       <div class="modal-body">
         <p>Some message</p>
-        <%= link_to "This result will still be within modal", some_link, data: { blacklight: "preserve" } %>
+        <%= link_to "This result will still be within modal", some_link, data: { blacklight_modal: "preserve" } %>
       </div>
 
 
@@ -349,8 +350,9 @@ Blacklight.modal.modalCloseSelector = '[data-blacklight-modal~=close]'; // Calle
 // to show to user in modal.  Right now called only for extreme
 // network errors.
 
-Blacklight.modal.onFailure = function (data) {
-  var contents = '<div class="modal-header">' + '<div class="modal-title">Network Error</div>' + '<button type="button" class="blacklight-modal-close close" data-dismiss="modal" aria-label="Close">' + '  <span aria-hidden="true">&times;</span>' + '</button>';
+Blacklight.modal.onFailure = function (jqXHR, textStatus, errorThrown) {
+  console.error('Server error:', this.url, jqXHR.status, errorThrown);
+  var contents = '<div class="modal-header">' + '<div class="modal-title">There was a problem with your request.</div>' + '<button type="button" class="blacklight-modal-close btn-close close" data-dismiss="modal" aria-label="Close">' + '  <span aria-hidden="true">&times;</span>' + '</button></div>' + ' <div class="modal-body"><p>Expected a successful response from the server, but got an error</p>' + '<pre>' + this.type + ' ' + this.url + "\n" + jqXHR.status + ': ' + errorThrown + '</pre></div>';
   $(Blacklight.modal.modalSelector).find('.modal-content').html(contents);
   $(Blacklight.modal.modalSelector).modal('show');
 };
@@ -441,7 +443,7 @@ Blacklight.doSearchContextBehavior = function () {
   const nodes = Array.prototype.slice.call(elements);
   nodes.forEach(function (element) {
     element.addEventListener('click', function (e) {
-      Blacklight.handleSearchContextMethod.call(e.target, e);
+      Blacklight.handleSearchContextMethod.call(e.currentTarget, e);
     });
   });
 }; // this is the Rails.handleMethod with a couple adjustments, described inline:
@@ -488,10 +490,8 @@ Blacklight.handleSearchContextMethod = function (event) {
   form.querySelector('[type="submit"]').click();
   event.preventDefault();
   event.stopPropagation();
-  event.stopImmediatePropagation();
 };
 
 Blacklight.onLoad(function () {
   Blacklight.doSearchContextBehavior();
 });
-
